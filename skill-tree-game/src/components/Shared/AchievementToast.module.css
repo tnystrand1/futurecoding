@@ -1,0 +1,57 @@
+.toast {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: #f39c12;
+  border: 4px solid #d68910;
+  padding: 16px 24px;
+  color: white;
+  font-family: 'Courier New', monospace;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  animation: slideIn 0.3s ease-out, slideOut 0.3s ease-out 3.5s forwards;
+  z-index: 1000;
+  box-shadow: 0 4px 0 rgba(0,0,0,0.2);
+}
+
+.icon {
+  font-size: 32px;
+}
+
+.content h3 {
+  margin: 0 0 4px 0;
+  font-size: 16px;
+  text-transform: uppercase;
+}
+
+.content p {
+  margin: 0;
+  font-size: 12px;
+  opacity: 0.9;
+}
+
+.xp {
+  display: inline-block;
+  margin-top: 4px;
+  font-size: 14px;
+  font-weight: bold;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(400px);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideOut {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(400px);
+  }
+}
