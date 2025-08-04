@@ -133,7 +133,7 @@ const ModernSkillNode = ({
                 </div>
                 
                 <p className="text-xs text-gray-600 leading-relaxed">
-                  {skill.description || "Master this skill to unlock new abilities and earn XP."}
+                  {skill.description || skill.unlockCriteria?.prompt || "Master this skill to unlock new abilities and earn XP."}
                 </p>
 
                 {skill.prerequisites.length > 0 && (
@@ -141,8 +141,8 @@ const ModernSkillNode = ({
                     <span className="text-gray-500">Prerequisites: </span>
                     <span className="text-gray-700">
                       {skill.prerequisites.map(prereq => {
-                        const prereqSkill = studentProgress?.skills?.[prereq];
-                        return prereqSkill?.name || prereq;
+                        // We need to import SKILL_TREE to get skill names, for now just show the ID
+                        return prereq.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
                       }).join(', ')}
                     </span>
                   </div>

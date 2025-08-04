@@ -7,25 +7,25 @@ import { useMemo } from 'react';
 export const useFeatureFlags = () => {
   const flags = useMemo(() => ({
     // Dashboard modernization
-    useModernDashboard: process.env.VITE_MODERN_DASHBOARD === 'true' || false,
+    useModernDashboard: import.meta.env.VITE_MODERN_DASHBOARD === 'true' || false,
     
     // Skill tree enhancements
-    useModernSkillTree: process.env.VITE_MODERN_SKILL_TREE === 'true' || false,
+    useModernSkillTree: import.meta.env.VITE_MODERN_SKILL_TREE === 'true' || false,
     
     // Form improvements
-    useModernForms: process.env.VITE_MODERN_FORMS === 'true' || false,
+    useModernForms: import.meta.env.VITE_MODERN_FORMS === 'true' || false,
     
     // Keep Civilization theme as option
-    enableCivTheme: process.env.VITE_ENABLE_CIV_THEME !== 'false',
+    enableCivTheme: import.meta.env.VITE_ENABLE_CIV_THEME !== 'false',
     
     // Development features
-    showComponentSwitcher: process.env.NODE_ENV === 'development',
+    showComponentSwitcher: import.meta.env.DEV === true,
     
     // Performance features
-    enableLazyLoading: process.env.VITE_LAZY_LOADING === 'true' || false,
+    enableLazyLoading: import.meta.env.VITE_LAZY_LOADING === 'true' || false,
     
     // Accessibility features
-    enhancedA11y: process.env.VITE_ENHANCED_A11Y === 'true' || false,
+    enhancedA11y: import.meta.env.VITE_ENHANCED_A11Y === 'true' || false,
   }), []);
 
   return flags;
