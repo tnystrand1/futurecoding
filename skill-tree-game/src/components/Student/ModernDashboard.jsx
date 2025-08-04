@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import SkillTree from '../Game/SkillTree';
+import ModernSkillTree from '../Game/ModernSkillTree';
 import WebsitePreview from './WebsitePreview';
-import DocumentModal from '../Documentation/DocumentModal';
+import ModernEvidenceModal from '../Documentation/ModernEvidenceModal';
 import AchievementToast from '../Shared/AchievementToast';
 import LoadingSpinner from '../Shared/LoadingSpinner';
 import { useGameState } from '../../hooks/useGameState';
@@ -157,14 +157,11 @@ const ModernDashboard = () => {
                   Click on available skills to unlock them by submitting evidence
                 </p>
               </CardHeader>
-              <CardContent className="p-0">
-                <div className="overflow-auto">
-                  <SkillTree 
-                    skills={studentProgress.skills}
-                    onSkillClick={handleSkillClick}
-                    studentProgress={studentProgress}
-                  />
-                </div>
+              <CardContent className="p-4">
+                <ModernSkillTree 
+                  studentProgress={studentProgress}
+                  onSkillClick={handleSkillClick}
+                />
               </CardContent>
             </Card>
           </div>
@@ -254,7 +251,7 @@ const ModernDashboard = () => {
 
       {/* Modals */}
       {showDocumentModal && (
-        <DocumentModal
+        <ModernEvidenceModal
           skill={selectedSkill}
           onSubmit={handleSubmitEvidence}
           onClose={() => {
