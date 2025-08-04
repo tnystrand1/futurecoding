@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import ModernSkillTree from '../Game/ModernSkillTree';
+import DebugSkillTree from '../Game/DebugSkillTree';
 import WebsitePreview from './WebsitePreview';
 import ModernEvidenceModal from '../Documentation/ModernEvidenceModal';
 import AchievementToast from '../Shared/AchievementToast';
@@ -158,9 +159,8 @@ const ModernDashboard = () => {
                 </p>
               </CardHeader>
               <CardContent className="p-4">
-                <ModernSkillTree 
+                <DebugSkillTree 
                   studentProgress={studentProgress}
-                  onSkillClick={handleSkillClick}
                 />
               </CardContent>
             </Card>

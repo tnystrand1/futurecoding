@@ -93,7 +93,8 @@
   }
 
   .civ-border {
-    @apply border-2 border-civ-bronze bg-gradient-to-br from-civ-parchment to-yellow-50;
+    border: 2px solid #CD7F32;
+    background: linear-gradient(to bottom right, #F4E4BC, #fffef7);
     box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1), 
                 0 2px 4px rgba(139, 69, 19, 0.3);
   }
