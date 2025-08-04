@@ -180,8 +180,7 @@ const ModernDashboard = () => {
               </CardHeader>
               <CardContent>
                 <WebsitePreview 
-                  skills={studentProgress.skills}
-                  websitePower={studentProgress.websitePower}
+                  studentProgress={studentProgress}
                 />
               </CardContent>
             </Card>
