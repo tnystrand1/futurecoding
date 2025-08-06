@@ -11,11 +11,11 @@ test.describe('Dashboard Basic Tests', () => {
     // Check main dashboard elements
     await expect(page.locator('main')).toBeVisible();
     
-    // Check skill tree section (debug component)
-    await expect(page.locator('text=Debug Information')).toBeVisible();
+    // Check skill tree section (modern skill tree)
+    await expect(page.locator('text=Skill Development Path')).toBeVisible();
     
-    // Check visual test squares
-    await expect(page.locator('text=Red Square')).toBeVisible();
+    // Check that we have the modern skill tree with SVG connections
+    await expect(page.locator('svg[viewBox="0 0 1000 700"]')).toBeVisible();
   });
 
   test('Traditional Dashboard loads correctly', async ({ page }) => {

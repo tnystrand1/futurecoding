@@ -100,8 +100,18 @@
   }
 
   .skill-node {
-    @apply relative w-24 h-24 rounded-xl border-2 transition-all duration-300 cursor-pointer;
-    @apply hover:scale-105 hover:shadow-lg;
+    position: relative;
+    width: 96px;
+    height: 96px;
+    border-radius: 12px;
+    border: 2px solid;
+    transition: all 0.3s;
+    cursor: pointer;
+  }
+  
+  .skill-node:hover {
+    transform: scale(1.05);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
   }
 
   .skill-connection {

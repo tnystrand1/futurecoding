@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import ModernSkillTree from '../Game/ModernSkillTree';
-import DebugSkillTreeFixed from '../Game/DebugSkillTreeFixed';
 import WebsitePreview from './WebsitePreview';
 import ModernEvidenceModal from '../Documentation/ModernEvidenceModal';
 import AchievementToast from '../Shared/AchievementToast';
@@ -163,9 +162,11 @@ const ModernDashboard = () => {
                   Click on available skills to unlock them by submitting evidence
                 </p>
               </CardHeader>
-              <CardContent className="p-4">
-                <DebugSkillTreeFixed 
+              <CardContent className="p-0">
+                <ModernSkillTree 
                   studentProgress={studentProgress}
+                  onSkillClick={handleSkillClick}
+                  selectedSkill={selectedSkill}
                 />
               </CardContent>
             </Card>
