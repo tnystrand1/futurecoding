@@ -2,6 +2,7 @@
 import { initializeApp } from 'firebase/app';
 import { getFirestore, doc, setDoc } from 'firebase/firestore';
 import { config } from 'dotenv';
+import { SKILL_TREE } from '../src/data/skillTreeData.js';
 
 // Load environment variables
 config();
@@ -19,6 +20,23 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
+// Initialize skill progress with all skills in their default state
+function initializeSkillProgress() {
+  const skills = {};
+  
+  Object.values(SKILL_TREE).forEach(skill => {
+    skills[skill.id] = {
+      unlocked: false,
+      completed: false,
+      evidence: null,
+      unlockedAt: null,
+      completedAt: null
+    };
+  });
+  
+  return skills;
+}
+
 async function initializeDatabase() {
   try {
     // Create sample student
@@ -29,7 +47,7 @@ async function initializeDatabase() {
       totalXP: 0,
       websitePower: 0,
       developerProfile: null,
-      skills: {},
+      skills: initializeSkillProgress(),
       achievements: [],
       settings: {
         advisorFrequency: 'normal',

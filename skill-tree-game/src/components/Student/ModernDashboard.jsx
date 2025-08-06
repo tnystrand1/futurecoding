@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import ModernSkillTree from '../Game/ModernSkillTree';
-import DebugSkillTree from '../Game/DebugSkillTree';
+import DebugSkillTreeFixed from '../Game/DebugSkillTreeFixed';
 import WebsitePreview from './WebsitePreview';
 import ModernEvidenceModal from '../Documentation/ModernEvidenceModal';
 import AchievementToast from '../Shared/AchievementToast';
@@ -131,10 +131,15 @@ const ModernDashboard = () => {
                   <div className="text-sm text-gray-500">
                     {formatXP(studentProgress.totalXP)} XP
                   </div>
-                  <div className="w-24 bg-gray-200 rounded-full h-2 mt-2">
+                  <div style={{ width: '96px', backgroundColor: '#e5e7eb', borderRadius: '9999px', height: '8px', marginTop: '8px' }}>
                     <div 
-                      className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                      style={{ width: `${levelProgress}%` }}
+                      style={{ 
+                        backgroundColor: '#2563eb', 
+                        height: '8px', 
+                        borderRadius: '9999px', 
+                        transition: 'all 0.3s',
+                        width: `${levelProgress}%` 
+                      }}
                     />
                   </div>
                 </div>
@@ -159,7 +164,7 @@ const ModernDashboard = () => {
                 </p>
               </CardHeader>
               <CardContent className="p-4">
-                <DebugSkillTree 
+                <DebugSkillTreeFixed 
                   studentProgress={studentProgress}
                 />
               </CardContent>

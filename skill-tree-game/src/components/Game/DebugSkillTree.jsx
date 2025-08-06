@@ -9,12 +9,18 @@ const DebugSkillTree = ({ studentProgress }) => {
   const skills = Object.values(SKILL_TREE);
   
   return (
-    <div className="w-full h-full p-4 bg-gray-100">
-      <Card className="mb-4">
-        <CardHeader>
-          <CardTitle>Debug Information</CardTitle>
-        </CardHeader>
-        <CardContent>
+    <div style={{ width: '100%', minHeight: '600px', padding: '16px', backgroundColor: '#f3f4f6' }}>
+      <div style={{ 
+        backgroundColor: 'white', 
+        borderRadius: '8px', 
+        border: '1px solid #e5e7eb',
+        marginBottom: '16px',
+        padding: '16px'
+      }}>
+        <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '12px' }}>
+          Debug Information
+        </h3>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '14px' }}>
           <div className="space-y-2 text-sm">
             <div>Total skills in SKILL_TREE: {skills.length}</div>
             <div>Student progress available: {studentProgress ? 'Yes' : 'No'}</div>

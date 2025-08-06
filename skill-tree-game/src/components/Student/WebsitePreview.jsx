@@ -35,7 +35,7 @@ const WebsitePreview = ({ studentProgress }) => {
           <span className={styles.dot} />
         </div>
         <div className={styles.content}>
-          <h1>{studentName}'s Website</h1>
+          <h2>{studentName}'s Website</h2>
           <p>Website Power: {websitePower}</p>
           <p>Unlocked Skills: {skillCount}</p>
         </div>
