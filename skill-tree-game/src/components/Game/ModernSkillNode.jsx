@@ -76,54 +76,130 @@ const ModernSkillNode = ({
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
-      <Card 
-        className={cn(
-          "w-32 h-32 cursor-pointer transition-all duration-300 group relative",
-          getTierColor(),
-          getSkillStateClass(state),
-          isHovered && "scale-110 shadow-xl",
-          isClickable && "hover:ring-2 hover:ring-blue-400 hover:shadow-lg",
-          !available && "opacity-60"
-        )}
+      <div 
+        style={{
+          // Beautiful v0.dev card styling - FORCED
+          width: '128px',
+          height: '128px',
+          borderRadius: '12px',
+          border: state === 'completed' ? '3px solid #10b981' :
+                  state === 'unlocked' ? '3px solid #059669' :
+                  state === 'available' ? '3px solid #3b82f6' : '3px solid #d1d5db',
+          backgroundColor: state === 'completed' ? '#ecfdf5' :
+                          state === 'unlocked' ? '#d1fae5' :
+                          state === 'available' ? '#eff6ff' : '#f9fafb',
+          cursor: 'pointer',
+          transition: 'all 0.3s ease',
+          transform: isHovered ? 'scale(1.1)' : 'scale(1)',
+          boxShadow: isHovered ? '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)' :
+                     isClickable ? '0 8px 12px -2px rgba(59, 130, 246, 0.15), 0 4px 6px -1px rgba(59, 130, 246, 0.1)' :
+                     '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+          opacity: !available ? 0.6 : 1,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '12px',
+          textAlign: 'center',
+          position: 'relative',
+          // Force override any external styles
+          margin: '0 !important'
+        }}
         onClick={handleClick}
       >
-        <CardContent className="p-3 h-full flex flex-col items-center justify-center text-center">
-          {/* Skill Icon */}
-          <div className="mb-2 flex items-center justify-center">
-            {getSkillIcon()}
+        {/* Skill Icon */}
+        <div style={{ marginBottom: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          {getSkillIcon()}
+        </div>
+
+        {/* Skill Name */}
+        <h4 style={{ 
+          fontSize: '12px', 
+          fontWeight: '600', 
+          color: '#1f2937', 
+          lineHeight: '1.2', 
+          marginBottom: '4px',
+          textAlign: 'center'
+        }}>
+          {skill.name}
+        </h4>
+
+        {/* Tier Badge */}
+        <div style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          borderRadius: '9999px',
+          border: '1px solid',
+          paddingLeft: '6px',
+          paddingRight: '6px',
+          paddingTop: '2px',
+          paddingBottom: '2px',
+          fontSize: '10px',
+          fontWeight: '600',
+          marginBottom: '4px',
+          backgroundColor: skill.tier === 1 ? '#dcfce7' : skill.tier === 2 ? '#dbeafe' : '#ede9fe',
+          borderColor: skill.tier === 1 ? '#bbf7d0' : skill.tier === 2 ? '#bfdbfe' : '#ddd6fe',
+          color: skill.tier === 1 ? '#166534' : skill.tier === 2 ? '#1e40af' : '#7c3aed'
+        }}>
+          Tier {skill.tier}
+        </div>
+
+        {/* XP Reward */}
+        <div style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          borderRadius: '9999px',
+          border: '1px solid #fef3c7',
+          paddingLeft: '6px',
+          paddingRight: '6px',
+          paddingTop: '1px',
+          paddingBottom: '1px',
+          fontSize: '10px',
+          fontWeight: '600',
+          backgroundColor: '#fffbeb',
+          borderColor: '#fef3c7',
+          color: '#92400e'
+        }}>
+          +{skill.xpReward} XP
+        </div>
+
+        {/* Unlock indicator for available skills */}
+        {isClickable && (
+          <div style={{
+            position: 'absolute',
+            top: '-4px',
+            right: '-4px'
+          }}>
+            <div style={{
+              width: '12px',
+              height: '12px',
+              backgroundColor: '#3b82f6',
+              borderRadius: '50%',
+              animation: 'ping 1s cubic-bezier(0, 0, 0.2, 1) infinite'
+            }} />
+            <div style={{
+              position: 'absolute',
+              top: '0',
+              width: '12px',
+              height: '12px',
+              backgroundColor: '#2563eb',
+              borderRadius: '50%'
+            }} />
           </div>
+        )}
+      </div>
 
-          {/* Skill Name */}
-          <h4 className="text-xs font-semibold text-gray-800 leading-tight mb-1">
-            {skill.name}
-          </h4>
-
-          {/* Tier Badge */}
-          <Badge 
-            variant={`tier${skill.tier}`}
-            className="text-xs mb-1"
-          >
-            {formatTierName(skill.tier)}
-          </Badge>
-
-          {/* XP Reward */}
-          <Badge variant="xp" className="text-xs">
-            +{skill.xpReward} XP
-          </Badge>
-
-          {/* Unlock indicator for available skills */}
-          {isClickable && (
-            <div className="absolute -top-1 -right-1">
-              <div className="w-3 h-3 bg-blue-500 rounded-full animate-ping" />
-              <div className="absolute top-0 w-3 h-3 bg-blue-600 rounded-full" />
-            </div>
-          )}
-        </CardContent>
-
-        {/* Hover Tooltip */}
-        {isHovered && (
-          <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 z-30">
-            <Card className="w-64 p-3 shadow-lg border-2">
+      {/* Hover Tooltip */}
+      {isHovered && (
+        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 z-30">
+          <div style={{
+            width: '256px',
+            padding: '12px',
+            backgroundColor: 'white',
+            borderRadius: '8px',
+            border: '2px solid #e5e7eb',
+            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)'
+          }}>
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <h5 className="font-semibold text-sm">{skill.name}</h5>
@@ -168,10 +244,9 @@ const ModernSkillNode = ({
                   </div>
                 )}
               </div>
-            </Card>
+            </div>
           </div>
         )}
-      </Card>
     </div>
   );
 };

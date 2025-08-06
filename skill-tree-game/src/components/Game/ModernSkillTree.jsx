@@ -88,6 +88,38 @@ const ModernSkillTree = ({ studentProgress, onSkillClick }) => {
 
   return (
     <div className="w-full h-full flex flex-col space-y-4">
+      {/* DEBUG: Force visible styling */}
+      <div style={{
+        position: 'absolute',
+        top: '10px',
+        right: '10px',
+        background: 'red',
+        color: 'white',
+        padding: '8px 12px',
+        fontSize: '14px',
+        fontWeight: 'bold',
+        zIndex: 9999,
+        borderRadius: '4px',
+        boxShadow: '0 4px 8px rgba(0,0,0,0.3)'
+      }}>
+        🎨 MODERN v0.dev LOADED ✅
+      </div>
+      
+      {/* DEBUG: Test if inline styles work for skill nodes */}
+      <div style={{
+        position: 'absolute',
+        top: '50px',
+        right: '10px',
+        background: 'green',
+        color: 'white',
+        padding: '4px 8px',
+        fontSize: '12px',
+        zIndex: 9999,
+        borderRadius: '4px'
+      }}>
+        CSS Debug: {document.querySelectorAll('.w-32').length} w-32 elements found
+      </div>
+      
       {/* Control Panel */}
       <Card className="flex-shrink-0">
         <CardHeader className="pb-3">

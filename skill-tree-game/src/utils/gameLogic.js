@@ -40,6 +40,53 @@ export const GameLogic = {
     );
   },
 
+  // Calculate competency scores based on evidence
+  calculateCompetencies: (skills) => {
+    const competencies = {
+      steamInterest: 0,
+      communication: 0,
+      continuousLearning: 0
+    };
+
+    // Define which skills contribute to which competencies
+    const competencyMapping = {
+      'cultural_mapping': { steamInterest: 1.5, communication: 0.5 },
+      'client_discovery': { communication: 1.5, continuousLearning: 0.5 },
+      'descriptive_prompting': { communication: 1.0, steamInterest: 0.5 },
+      'code_implementation': { steamInterest: 1.0, continuousLearning: 1.0 },
+      'css_variables': { steamInterest: 1.5, continuousLearning: 0.5 },
+      'ai_assisted_debugging': { continuousLearning: 1.5, steamInterest: 0.5 },
+      'user_testing': { communication: 1.0, continuousLearning: 1.0 },
+      'accessibility': { communication: 1.5, continuousLearning: 0.5 },
+      'iterative_refinement': { continuousLearning: 1.5, steamInterest: 0.5 },
+      'deployment': { continuousLearning: 1.0, steamInterest: 1.0 },
+      'design_systems': { steamInterest: 1.5, communication: 0.5 },
+      'mentorship': { communication: 2.0 },
+      'project_showcase': { communication: 1.5, steamInterest: 0.5 },
+      'technology_research': { continuousLearning: 2.0 },
+      'community_engagement': { communication: 1.5, continuousLearning: 0.5 }
+    };
+
+    // Calculate scores based on unlocked skills only (not pending)
+    Object.entries(skills || {}).forEach(([skillId, skillData]) => {
+      if (skillData.unlocked && skillData.evidence?.status === 'approved') {
+        const mapping = competencyMapping[skillId];
+        if (mapping) {
+          Object.entries(mapping).forEach(([competency, points]) => {
+            competencies[competency] += points;
+          });
+        }
+      }
+    });
+
+    // Cap at 5.0 and format to 1 decimal place
+    return {
+      steamInterest: Math.min(5.0, competencies.steamInterest).toFixed(1),
+      communication: Math.min(5.0, competencies.communication).toFixed(1),
+      continuousLearning: Math.min(5.0, competencies.continuousLearning).toFixed(1)
+    };
+  },
+
   // Check achievements
   checkAchievements: (studentProgress, previousProgress = {}) => {
     const achievements = [];

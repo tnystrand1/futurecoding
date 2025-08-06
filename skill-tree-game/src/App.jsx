@@ -3,6 +3,8 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import Dashboard from './components/Student/Dashboard';
 import CivDashboard from './components/Student/CivDashboard';
 import ModernDashboard from './components/Student/ModernDashboard';
+import UserSelector from './components/Student/UserSelector';
+import TeacherView from './components/Admin/TeacherView';
 import { useFeatureFlags } from './hooks/useFeatureFlags';
 import './styles/tailwind.css';
 import './styles/globals.css';
@@ -18,10 +20,10 @@ function App() {
     <Router>
       <div className="app">
         <Routes>
-          {/* Default route - choose between modern and traditional */}
+          {/* Default route - User selection screen */}
           <Route 
             path="/" 
-            element={<Navigate to={flags.useModernDashboard ? "/modern/sample_student" : "/civ/sample_student"} />} 
+            element={<UserSelector />} 
           />
           
           {/* Traditional dashboard route */}
@@ -35,30 +37,44 @@ function App() {
           
           {/* Feature flag controlled route */}
           <Route path="/dashboard/:studentId" element={<StudentDashboard />} />
+          
+          {/* Teacher/Admin route */}
+          <Route path="/teacher" element={<TeacherView />} />
         </Routes>
 
-        {/* Development component switcher */}
-        {flags.showComponentSwitcher && (
-          <div className="fixed bottom-4 right-4 bg-black text-white p-4 rounded-lg shadow-lg z-50">
-            <div className="text-sm font-bold mb-2">🔧 Dev Tools</div>
-            <div className="space-y-2 text-xs">
-              <div>
-                <a href="/student/sample_student" className="text-blue-300 hover:underline">
-                  Traditional Dashboard
-                </a>
-              </div>
-              <div>
-                <a href="/civ/sample_student" className="text-yellow-300 hover:underline">
-                  Civ III Dashboard
-                </a>
-              </div>
-              <div>
-                <a href="/modern/sample_student" className="text-green-300 hover:underline">
-                  Modern Dashboard
-                </a>
-              </div>
-            </div>
-          </div>
+        {/* Back to User Selection Button */}
+        {window.location.pathname !== '/' && !window.location.pathname.includes('/teacher') && (
+          <a
+            href="/"
+            style={{
+              position: 'fixed',
+              top: '20px',
+              left: '20px',
+              background: 'rgba(0,0,0,0.7)',
+              color: 'white',
+              padding: '12px 16px',
+              borderRadius: '8px',
+              textDecoration: 'none',
+              fontSize: '14px',
+              fontWeight: 'bold',
+              zIndex: 1000,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+              transition: 'all 0.2s'
+            }}
+            onMouseOver={(e) => {
+              e.target.style.background = 'rgba(0,0,0,0.9)';
+              e.target.style.transform = 'translateY(-1px)';
+            }}
+            onMouseOut={(e) => {
+              e.target.style.background = 'rgba(0,0,0,0.7)';
+              e.target.style.transform = 'translateY(0)';
+            }}
+          >
+            ← Back to Students
+          </a>
         )}
       </div>
     </Router>

@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import CivSkillTree from '../Game/CivSkillTree';
+import { SKILL_TREE } from '../../data/skillTreeData';
 import DocumentModal from '../Documentation/DocumentModal';
 import AchievementToast from '../Shared/AchievementToast';
 import LoadingSpinner from '../Shared/LoadingSpinner';
 import { useGameState } from '../../hooks/useGameState';
+import { GameLogic } from '../../utils/gameLogic';
 import '../../styles/civilization.css';
 
 const CivDashboard = () => {
@@ -34,7 +35,17 @@ const CivDashboard = () => {
     }
   }, [achievements]);
 
+  // Calculate dynamic competency scores
+  const competencies = GameLogic.calculateCompetencies(studentProgress.skills || {});
+
   const handleSkillClick = (skill) => {
+    const skillData = studentProgress.skills?.[skill.id];
+    
+    // If skill was rejected, show rejection message
+    if (skillData?.evidence?.status === 'rejected' && skillData.evidence.rejectionMessage) {
+      alert(`This skill was rejected by your teacher:\n\n"${skillData.evidence.rejectionMessage}"\n\nYou can resubmit new evidence.`);
+    }
+    
     setSelectedSkill(skill);
     setShowDocumentModal(true);
   };
@@ -43,9 +54,14 @@ const CivDashboard = () => {
     const result = await unlockSkill(skillId, evidence);
     if (result.success) {
       setShowDocumentModal(false);
-      // Show success message or animation
+      if (result.isPending) {
+        alert(result.message); // Show pending approval message
+      } else {
+        // Show success message for immediate unlocks (if any)
+        alert(result.message || 'Skill unlocked successfully!');
+      }
     } else {
-      alert(`Error unlocking skill: ${result.error}`);
+      alert(`Error submitting evidence: ${result.error}`);
     }
   };
 
@@ -56,129 +72,720 @@ const CivDashboard = () => {
   const unlockedSkillsCount = Object.values(studentProgress.skills || {})
     .filter(skill => skill.unlocked).length;
 
+  // Helper functions for skill state
+  const isSkillUnlocked = (skillId) => {
+    return studentProgress.skills?.[skillId]?.unlocked || false;
+  };
+
+  const isSkillPending = (skillId) => {
+    return studentProgress.skills?.[skillId]?.evidenceSubmitted && 
+           studentProgress.skills?.[skillId]?.evidence?.status === 'pending';
+  };
+
+  const isSkillRejected = (skillId) => {
+    return studentProgress.skills?.[skillId]?.evidence?.status === 'rejected';
+  };
+  
+  const isSkillAvailable = (skill) => {
+    if (skill.tier === 1) return true;
+    return skill.prerequisites.every(prereq => isSkillUnlocked(prereq));
+  };
+
+  const getSkillsByTier = (tier) => {
+    return Object.values(SKILL_TREE).filter(skill => skill.tier === tier);
+  };
+
+  const getNextRecommendedSkills = () => {
+    const availableSkills = Object.values(SKILL_TREE)
+      .filter(skill => !isSkillUnlocked(skill.id) && isSkillAvailable(skill))
+      .slice(0, 3);
+    return availableSkills;
+  };
+
   return (
-    <div className="civ-dashboard">
-      <header className="civ-header">
-        <h1 className="civ-title">
-          {studentName.toUpperCase()}'S DEVELOPMENT RESEARCH
-        </h1>
-      </header>
-      
-      <div className="civ-main-content">
-        <div className="civ-tech-tree">
-          <div className="civ-tree-header">
-            <h2 className="civ-tree-title">Web Development Technologies</h2>
-            <div className="civ-tree-stats">
-              <div className="civ-stat">
-                <span>Level: </span>
-                <strong>{levelProgress?.level || 1}</strong>
-              </div>
-              <div className="civ-stat">
-                <span>Knowledge: </span>
-                <strong>{studentProgress.totalXP || 0} XP</strong>
-              </div>
-              <div className="civ-stat">
-                <span>Website Power: </span>
-                <strong>{studentProgress.websitePower || 0}</strong>
-              </div>
-            </div>
-          </div>
-          
-          <CivSkillTree 
-            studentId={studentId} 
-            studentProgress={studentProgress} 
-            onSkillClick={handleSkillClick} 
-          />
+    <div style={{ 
+      minHeight: '100vh', 
+      background: 'linear-gradient(135deg, #8B4513 0%, #A0522D 100%)',
+      fontFamily: 'serif'
+    }}>
+      {/* Header */}
+      <div style={{ 
+        background: 'linear-gradient(135deg, #8B4513 0%, #A0522D 100%)',
+        padding: '20px 0',
+        textAlign: 'center',
+        borderBottom: '4px solid #654321'
+      }}>
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center', 
+          gap: '15px',
+          color: '#F4E4BC',
+          fontSize: '28px',
+          fontWeight: 'bold',
+          textShadow: '2px 2px 4px rgba(0,0,0,0.5)'
+        }}>
+                      🏛️ FUTURE CODING ACADEMY
         </div>
-        
-        <div className="civ-advisor-panel">
-          <div className="civ-advisor-avatar">
-            🧙‍♂️
+        <div style={{ 
+          color: '#F4E4BC', 
+          fontSize: '16px', 
+          marginTop: '8px',
+          opacity: 0.9
+        }}>
+          Master the Arts of AI-Powered Web Development
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div style={{ 
+        display: 'flex', 
+        gap: '20px', 
+        padding: '20px',
+        maxWidth: '1400px',
+        margin: '0 auto'
+      }}>
+        {/* Left Sidebar - Student Info */}
+        <div style={{ width: '300px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          {/* Student Card */}
+          <div style={{ 
+            background: 'linear-gradient(135deg, #F4E4BC 0%, #E6D5A8 100%)',
+            border: '3px solid #8B4513',
+            borderRadius: '12px',
+            padding: '20px',
+            textAlign: 'center',
+            boxShadow: '0 4px 8px rgba(0,0,0,0.3)'
+          }}>
+            <div style={{ 
+              width: '60px',
+              height: '60px',
+              background: studentProgress.avatar?.color1 ? 
+                `linear-gradient(135deg, ${studentProgress.avatar.color1} 0%, ${studentProgress.avatar.color2 || studentProgress.avatar.color1} 100%)` :
+                'linear-gradient(135deg, #FF8C42 0%, #FF6B1A 100%)',
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 15px',
+              fontSize: '24px',
+              border: '3px solid #8B4513'
+            }}>
+              {studentProgress.avatar?.emoji || '👤'}
+            </div>
+            <h3 style={{ 
+              color: '#8B4513', 
+              margin: '0 0 10px', 
+              fontSize: '18px',
+              fontWeight: 'bold'
+            }}>
+              {studentProgress.name || studentId?.replace(/_/g, ' ') || 'Student'}
+            </h3>
+            <div style={{ 
+              background: '#CD853F',
+              color: 'white',
+              padding: '4px 12px',
+              borderRadius: '20px',
+              fontSize: '12px',
+              fontWeight: 'bold',
+              display: 'inline-block',
+              marginBottom: '15px'
+            }}>
+              Developing
+            </div>
+            
+            <div style={{ display: 'flex', justifyContent: 'space-around', marginTop: '15px' }}>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ color: '#8B4513', fontSize: '12px' }}>⭐ Level</div>
+                <div style={{ color: '#8B4513', fontSize: '20px', fontWeight: 'bold' }}>
+                  {levelProgress?.level || 2}
+                </div>
+              </div>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ color: '#8B4513', fontSize: '12px' }}>⚡ Power</div>
+                <div style={{ color: '#8B4513', fontSize: '20px', fontWeight: 'bold' }}>
+                  {studentProgress.websitePower || 15}
+                </div>
+              </div>
+            </div>
+
+            <div style={{ marginTop: '15px' }}>
+              <div style={{ color: '#8B4513', fontSize: '12px', marginBottom: '5px' }}>
+                Experience Progress
+              </div>
+              <div style={{ 
+                background: '#8B4513',
+                height: '8px',
+                borderRadius: '4px',
+                overflow: 'hidden'
+              }}>
+                <div style={{ 
+                  background: 'linear-gradient(90deg, #FFD700 0%, #FF8C42 100%)',
+                  height: '100%',
+                  width: `${GameLogic.calculateLevelProgress(studentProgress.totalXP || 0).progress}%`,
+                  borderRadius: '4px'
+                }} />
+              </div>
+              <div style={{ 
+                color: '#8B4513', 
+                fontSize: '11px', 
+                textAlign: 'center',
+                marginTop: '3px'
+              }}>
+                {GameLogic.calculateLevelProgress(studentProgress.totalXP || 0).xpInCurrentLevel} / {GameLogic.calculateLevelProgress(studentProgress.totalXP || 0).xpNeededForNext} XP
+              </div>
+            </div>
+
+            <div style={{ marginTop: '15px' }}>
+              <div style={{ color: '#8B4513', fontSize: '12px', marginBottom: '5px' }}>
+                🏆 Skills Unlocked
+              </div>
+              <div style={{ color: '#8B4513', fontSize: '18px', fontWeight: 'bold' }}>
+                {unlockedSkillsCount}
+              </div>
+            </div>
           </div>
-          
-          <div className="civ-advisor-content">
-            <h3 className="civ-advisor-title">Web Development Advisor</h3>
+
+          {/* Competency Profile */}
+          <div style={{ 
+            background: 'linear-gradient(135deg, #E6E6FA 0%, #D8BFD8 100%)',
+            border: '3px solid #8B4513',
+            borderRadius: '12px',
+            padding: '15px',
+            boxShadow: '0 4px 8px rgba(0,0,0,0.3)'
+          }}>
+            <h4 style={{ 
+              color: '#4B0082', 
+              margin: '0 0 15px', 
+              fontSize: '16px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}>
+              📊 Competency Profile
+            </h4>
             
-            <div className="civ-website-preview">
-              <div className="civ-website-title">{studentName}'s Digital Realm</div>
-              <div className="civ-website-stats">
+            <div style={{ marginBottom: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                <span style={{ fontSize: '12px' }}>🔧</span>
+                <span style={{ color: '#4B0082', fontSize: '12px' }}>STEAM Interest</span>
+                <span style={{ color: '#4B0082', fontSize: '12px', fontWeight: 'bold' }}>{competencies.steamInterest}</span>
+              </div>
+              <div style={{ 
+                background: '#4B0082',
+                height: '4px',
+                borderRadius: '2px',
+                overflow: 'hidden'
+              }}>
+                <div style={{ 
+                  background: '#9370DB',
+                  height: '100%',
+                  width: `${(parseFloat(competencies.steamInterest) / 5.0) * 100}%`
+                }} />
+              </div>
+            </div>
+
+            <div style={{ marginBottom: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                <span style={{ fontSize: '12px' }}>💬</span>
+                <span style={{ color: '#4B0082', fontSize: '12px' }}>Communication</span>
+                <span style={{ color: '#4B0082', fontSize: '12px', fontWeight: 'bold' }}>{competencies.communication}</span>
+              </div>
+              <div style={{ 
+                background: '#4B0082',
+                height: '4px',
+                borderRadius: '2px',
+                overflow: 'hidden'
+              }}>
+                <div style={{ 
+                  background: '#9370DB',
+                  height: '100%',
+                  width: `${(parseFloat(competencies.communication) / 5.0) * 100}%`
+                }} />
+              </div>
+            </div>
+
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                <span style={{ fontSize: '12px' }}>🌱</span>
+                <span style={{ color: '#4B0082', fontSize: '12px' }}>Continuous Learning</span>
+                <span style={{ color: '#4B0082', fontSize: '12px', fontWeight: 'bold' }}>{competencies.continuousLearning}</span>
+              </div>
+              <div style={{ 
+                background: '#4B0082',
+                height: '4px',
+                borderRadius: '2px',
+                overflow: 'hidden'
+              }}>
+                <div style={{ 
+                  background: '#9370DB',
+                  height: '100%',
+                  width: `${(parseFloat(competencies.continuousLearning) / 5.0) * 100}%`
+                }} />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Center - Main Skill Tree */}
+        <div style={{ flex: 1 }}>
+          <div style={{ 
+            background: 'linear-gradient(135deg, #F4E4BC 0%, #E6D5A8 100%)',
+            border: '3px solid #8B4513',
+            borderRadius: '12px',
+            padding: '20px',
+            boxShadow: '0 4px 8px rgba(0,0,0,0.3)'
+          }}>
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              marginBottom: '20px'
+            }}>
+              <h2 style={{ 
+                color: '#8B4513', 
+                margin: '0',
+                fontSize: '20px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px'
+              }}>
+                ☀️ Web Development Technologies
+              </h2>
+            </div>
+            
+            <div style={{ 
+              color: '#8B4513', 
+              fontSize: '14px', 
+              textAlign: 'center',
+              marginBottom: '20px'
+            }}>
+              Master the skills to build amazing websites with AI
+            </div>
+
+            {/* Tier-based Skill Layout */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              {/* Foundations (Tier 1) */}
+              <div>
+                <div style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '10px',
+                  marginBottom: '15px'
+                }}>
+                  <span style={{ 
+                    background: '#4CAF50',
+                    color: 'white',
+                    padding: '4px 8px',
+                    borderRadius: '12px',
+                    fontSize: '12px',
+                    fontWeight: 'bold'
+                  }}>
+                    ⭕ Foundations (Tier 1)
+                  </span>
+                </div>
+                
+                <div style={{ 
+                  display: 'grid', 
+                  gridTemplateColumns: 'repeat(4, 1fr)', 
+                  gap: '15px' 
+                }}>
+                  {getSkillsByTier(1).map(skill => (
+                    <div
+                      key={skill.id}
+                      onClick={() => handleSkillClick(skill)}
+                      style={{
+                        background: isSkillUnlocked(skill.id) 
+                          ? 'linear-gradient(135deg, #4CAF50 0%, #45a049 100%)'
+                          : isSkillAvailable(skill) 
+                          ? 'linear-gradient(135deg, #FF9800 0%, #f57c00 100%)'
+                          : 'linear-gradient(135deg, #9E9E9E 0%, #757575 100%)',
+                        border: '2px solid #8B4513',
+                        borderRadius: '8px',
+                        padding: '15px',
+                        textAlign: 'center',
+                        cursor: 'pointer',
+                        color: 'white',
+                        fontSize: '12px',
+                        fontWeight: 'bold',
+                        transition: 'transform 0.2s',
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                      }}
+                      onMouseEnter={(e) => e.target.style.transform = 'scale(1.05)'}
+                      onMouseLeave={(e) => e.target.style.transform = 'scale(1)'}
+                    >
+                      <div style={{ fontSize: '20px', marginBottom: '8px' }}>
+                        {skill.id === 'cultural_mapping' ? '🎨' :
+                         skill.id === 'client_discovery' ? '🤝' :
+                         skill.id === 'descriptive_prompting' ? '💬' :
+                         skill.id === 'code_implementation' ? '⚡' : '📚'}
+                      </div>
+                      <div style={{ marginBottom: '5px' }}>{skill.name}</div>
+                      <div style={{ 
+                        background: 'rgba(0,0,0,0.2)',
+                        padding: '2px 6px',
+                        borderRadius: '10px',
+                        fontSize: '10px'
+                      }}>
+                        Tier 1
+                      </div>
+                      <div style={{ 
+                        fontSize: '10px', 
+                        marginTop: '5px',
+                        color: isSkillRejected(skill.id) ? '#e74c3c' : 'inherit',
+                        fontWeight: isSkillRejected(skill.id) ? 'bold' : 'normal'
+                      }}>
+                        {isSkillUnlocked(skill.id) ? 'unlocked' : 
+                         isSkillPending(skill.id) ? 'pending approval' :
+                         isSkillRejected(skill.id) ? 'rejected - click to see why' :
+                         isSkillAvailable(skill) ? 'developing' : 'locked'}
+                      </div>
+                      <div style={{ fontSize: '10px', marginTop: '2px' }}>
+                        +{skill.xpReward || 50} XP
+                      </div>
+                      {isSkillUnlocked(skill.id) && (
+                        <div style={{ 
+                          position: 'absolute',
+                          top: '5px',
+                          right: '5px',
+                          background: '#2E7D32',
+                          borderRadius: '50%',
+                          width: '16px',
+                          height: '16px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '10px'
+                        }}>
+                          ✓
+                        </div>
+                      )}
+                      {!isSkillUnlocked(skill.id) && isSkillAvailable(skill) && (
+                        <div style={{ 
+                          position: 'absolute',
+                          top: '5px',
+                          right: '5px',
+                          background: '#F57C00',
+                          borderRadius: '50%',
+                          width: '16px',
+                          height: '16px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '10px'
+                        }}>
+                          📤
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Intermediate (Tier 2) */}
+              <div>
+                <div style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '10px',
+                  marginBottom: '15px'
+                }}>
+                  <span style={{ 
+                    background: '#FF9800',
+                    color: 'white',
+                    padding: '4px 8px',
+                    borderRadius: '12px',
+                    fontSize: '12px',
+                    fontWeight: 'bold'
+                  }}>
+                    ⭕ Intermediate (Tier 2)
+                  </span>
+                </div>
+                
+                <div style={{ 
+                  display: 'grid', 
+                  gridTemplateColumns: 'repeat(4, 1fr)', 
+                  gap: '15px' 
+                }}>
+                  {getSkillsByTier(2).map(skill => (
+                    <div
+                      key={skill.id}
+                      onClick={() => handleSkillClick(skill)}
+                      style={{
+                        background: isSkillUnlocked(skill.id) 
+                          ? 'linear-gradient(135deg, #4CAF50 0%, #45a049 100%)'
+                          : isSkillAvailable(skill) 
+                          ? 'linear-gradient(135deg, #FF9800 0%, #f57c00 100%)'
+                          : 'linear-gradient(135deg, #9E9E9E 0%, #757575 100%)',
+                        border: '2px solid #8B4513',
+                        borderRadius: '8px',
+                        padding: '15px',
+                        textAlign: 'center',
+                        cursor: 'pointer',
+                        color: 'white',
+                        fontSize: '12px',
+                        fontWeight: 'bold',
+                        position: 'relative',
+                        transition: 'transform 0.2s',
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                      }}
+                      onMouseEnter={(e) => e.target.style.transform = 'scale(1.05)'}
+                      onMouseLeave={(e) => e.target.style.transform = 'scale(1)'}
+                    >
+                      <div style={{ fontSize: '20px', marginBottom: '8px' }}>🔒</div>
+                      <div style={{ marginBottom: '5px' }}>{skill.name}</div>
+                      <div style={{ 
+                        background: 'rgba(0,0,0,0.2)',
+                        padding: '2px 6px',
+                        borderRadius: '10px',
+                        fontSize: '10px'
+                      }}>
+                        Tier 2
+                      </div>
+                      <div style={{ 
+                        fontSize: '10px', 
+                        marginTop: '5px',
+                        color: isSkillRejected(skill.id) ? '#e74c3c' : 'inherit',
+                        fontWeight: isSkillRejected(skill.id) ? 'bold' : 'normal'
+                      }}>
+                        {isSkillUnlocked(skill.id) ? 'unlocked' : 
+                         isSkillPending(skill.id) ? 'pending approval' :
+                         isSkillRejected(skill.id) ? 'rejected - click to see why' :
+                         isSkillAvailable(skill) ? 'developing' : 'locked'}
+                      </div>
+                      <div style={{ fontSize: '10px', marginTop: '2px' }}>
+                        +{skill.xpReward || 100} XP
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Advanced (Tier 3) */}
+              <div>
+                <div style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '10px',
+                  marginBottom: '15px'
+                }}>
+                  <span style={{ 
+                    background: '#F44336',
+                    color: 'white',
+                    padding: '4px 8px',
+                    borderRadius: '12px',
+                    fontSize: '12px',
+                    fontWeight: 'bold'
+                  }}>
+                    ⭕ Advanced (Tier 3)
+                  </span>
+                </div>
+                
+                <div style={{ 
+                  display: 'grid', 
+                  gridTemplateColumns: 'repeat(4, 1fr)', 
+                  gap: '15px' 
+                }}>
+                  {getSkillsByTier(3).map(skill => (
+                    <div
+                      key={skill.id}
+                      onClick={() => handleSkillClick(skill)}
+                      style={{
+                        background: 'linear-gradient(135deg, #9E9E9E 0%, #757575 100%)',
+                        border: '2px solid #8B4513',
+                        borderRadius: '8px',
+                        padding: '15px',
+                        textAlign: 'center',
+                        cursor: 'pointer',
+                        color: 'white',
+                        fontSize: '12px',
+                        fontWeight: 'bold',
+                        transition: 'transform 0.2s',
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                      }}
+                      onMouseEnter={(e) => e.target.style.transform = 'scale(1.05)'}
+                      onMouseLeave={(e) => e.target.style.transform = 'scale(1)'}
+                    >
+                      <div style={{ fontSize: '20px', marginBottom: '8px' }}>🔒</div>
+                      <div style={{ marginBottom: '5px' }}>{skill.name}</div>
+                      <div style={{ 
+                        background: 'rgba(0,0,0,0.2)',
+                        padding: '2px 6px',
+                        borderRadius: '10px',
+                        fontSize: '10px'
+                      }}>
+                        Tier 3
+                      </div>
+                      <div style={{ fontSize: '10px', marginTop: '5px' }}>locked</div>
+                      <div style={{ fontSize: '10px', marginTop: '2px' }}>
+                        +{skill.xpReward || 150} XP
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Sidebar */}
+        <div style={{ width: '300px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          {/* Web Development Advisor */}
+          <div style={{ 
+            background: 'linear-gradient(135deg, #E1BEE7 0%, #CE93D8 100%)',
+            border: '3px solid #8B4513',
+            borderRadius: '12px',
+            padding: '20px',
+            textAlign: 'center',
+            boxShadow: '0 4px 8px rgba(0,0,0,0.3)'
+          }}>
+            <div style={{ 
+              width: '60px',
+              height: '60px',
+              background: 'linear-gradient(135deg, #9C27B0 0%, #7B1FA2 100%)',
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 15px',
+              fontSize: '24px',
+              border: '3px solid #8B4513'
+            }}>
+              💡
+            </div>
+            <h3 style={{ 
+              color: '#4A148C', 
+              margin: '0 0 15px', 
+              fontSize: '16px',
+              fontWeight: 'bold'
+            }}>
+              Web Development Advisor
+            </h3>
+            
+            <div style={{ 
+              background: 'rgba(255,255,255,0.3)',
+              borderRadius: '8px',
+              padding: '12px',
+              marginBottom: '15px'
+            }}>
+              <div style={{ 
+                color: '#4A148C', 
+                fontSize: '14px', 
+                fontWeight: 'bold',
+                marginBottom: '5px'
+              }}>
+                {(studentProgress.name || studentId?.replace(/_/g, ' ') || 'Student')}'s Digital Realm
+              </div>
+              <div style={{ color: '#4A148C', fontSize: '12px', lineHeight: '1.4' }}>
                 Website Power: {studentProgress.websitePower || 0}<br/>
-                Unlocked Skills: {unlockedSkillsCount}<br/>
-                Development Stage: {levelProgress?.level > 3 ? 'Advanced' : levelProgress?.level > 1 ? 'Intermediate' : 'Novice'}
+                Unlocked Skills: {Object.values(studentProgress.skills || {}).filter(skill => skill.unlocked).length}<br/>
+                Development Stage: {studentProgress.currentLevel > 3 ? 'Advanced' : studentProgress.currentLevel > 1 ? 'Intermediate' : 'Novice'}
               </div>
             </div>
+
+            <div>
+              <div style={{ 
+                color: '#4A148C', 
+                fontSize: '14px', 
+                fontWeight: 'bold',
+                marginBottom: '8px'
+              }}>
+                Experience Progress
+              </div>
+              <div style={{ 
+                background: '#4A148C',
+                height: '8px',
+                borderRadius: '4px',
+                overflow: 'hidden'
+              }}>
+                <div style={{ 
+                  background: 'linear-gradient(90deg, #E1BEE7 0%, #CE93D8 100%)',
+                  height: '100%',
+                  width: `${GameLogic.calculateLevelProgress(studentProgress.totalXP || 0).progress}%`
+                }} />
+              </div>
+              <div style={{ 
+                color: '#4A148C', 
+                fontSize: '11px', 
+                textAlign: 'center',
+                marginTop: '3px'
+              }}>
+                {GameLogic.calculateLevelProgress(studentProgress.totalXP || 0).xpInCurrentLevel} / {GameLogic.calculateLevelProgress(studentProgress.totalXP || 0).xpNeededForNext}
+              </div>
+            </div>
+          </div>
+
+          {/* Recommended Next Steps */}
+          <div style={{ 
+            background: 'linear-gradient(135deg, #C8E6C9 0%, #A5D6A7 100%)',
+            border: '3px solid #8B4513',
+            borderRadius: '12px',
+            padding: '15px',
+            boxShadow: '0 4px 8px rgba(0,0,0,0.3)'
+          }}>
+            <h4 style={{ 
+              color: '#1B5E20', 
+              margin: '0 0 15px', 
+              fontSize: '16px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}>
+              🎯 Recommended Next Steps
+            </h4>
             
-            <div className="civ-progress-section">
-              <div className="civ-progress-title">Experience Progress</div>
-              <div className="civ-xp-bar">
-                <div 
-                  className="civ-xp-fill" 
-                  style={{ width: `${levelProgress?.progress || 0}%` }}
-                />
-                <div className="civ-xp-text">
-                  {studentProgress.totalXP || 0} XP
+            {getNextRecommendedSkills().map((skill, index) => (
+              <div 
+                key={skill.id}
+                onClick={() => handleSkillClick(skill)}
+                style={{ 
+                  background: 'rgba(255,255,255,0.5)',
+                  border: '2px solid #4CAF50',
+                  borderRadius: '8px',
+                  padding: '10px',
+                  marginBottom: '10px',
+                  cursor: 'pointer',
+                  transition: 'transform 0.2s'
+                }}
+                onMouseEnter={(e) => e.target.style.transform = 'scale(1.02)'}
+                onMouseLeave={(e) => e.target.style.transform = 'scale(1)'}
+              >
+                <div style={{ 
+                  color: '#1B5E20', 
+                  fontSize: '13px', 
+                  fontWeight: 'bold',
+                  marginBottom: '4px'
+                }}>
+                  {skill.name}
+                </div>
+                <div style={{ 
+                  color: '#2E7D32', 
+                  fontSize: '11px',
+                  marginBottom: '4px'
+                }}>
+                  Tier {skill.tier}
+                </div>
+                <div style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'space-between'
+                }}>
+                  <span style={{ fontSize: '10px', color: '#1B5E20' }}>
+                    {index === 0 ? '→' : index === 1 ? '→' : '→'}
+                  </span>
                 </div>
               </div>
-            </div>
+            ))}
 
-            <div className="civ-progress-section">
-              <div className="civ-progress-title">Research Guide</div>
+            {getNextRecommendedSkills().length === 0 && (
               <div style={{ 
-                background: 'rgba(244, 228, 188, 0.9)', 
-                border: '2px solid #8B4513',
-                borderRadius: '8px',
-                padding: '10px',
-                color: '#2d1810',
-                fontSize: '11px',
-                lineHeight: '1.3',
-                textAlign: 'left',
-                marginBottom: '15px'
+                color: '#1B5E20', 
+                fontSize: '12px', 
+                textAlign: 'center',
+                fontStyle: 'italic'
               }}>
-                <div style={{ fontWeight: 'bold', marginBottom: '6px' }}>Legend:</div>
-                <div>🟡 Available to Research</div>
-                <div>🟢 Researched</div>
-                <div>🔒 Requires Prerequisites</div>
-                <div style={{ marginTop: '6px', fontSize: '10px', opacity: 0.8 }}>
-                  Arrows show prerequisite relationships
-                </div>
+                Complete more skills to unlock recommendations
               </div>
-            </div>
-
-            <div className="civ-progress-section">
-              <div className="civ-progress-title">Advisor's Counsel</div>
-              <div style={{ 
-                background: 'rgba(244, 228, 188, 0.9)', 
-                border: '2px solid #8B4513',
-                borderRadius: '8px',
-                padding: '12px',
-                color: '#2d1810',
-                fontSize: '12px',
-                lineHeight: '1.4',
-                textAlign: 'left'
-              }}>
-                {unlockedSkillsCount === 0 && (
-                  <span>
-                    📜 Begin your journey by mastering the foundational arts. 
-                    I recommend starting with <strong>Cultural Asset Mapping</strong> 
-                    to understand how your unique perspective shapes design.
-                  </span>
-                )}
-                {unlockedSkillsCount > 0 && unlockedSkillsCount < 4 && (
-                  <span>
-                    ⚡ Excellent progress! Continue building your foundation. 
-                    Consider exploring <strong>Client Discovery</strong> to 
-                    understand the needs of those you serve.
-                  </span>
-                )}
-                {unlockedSkillsCount >= 4 && (
-                  <span>
-                    🎯 Your foundational knowledge grows strong! You are ready 
-                    to advance to Tier 2 technologies. The path to mastery 
-                    awaits in <strong>Project Scoping</strong> and beyond.
-                  </span>
-                )}
-              </div>
-            </div>
+            )}
           </div>
         </div>
       </div>

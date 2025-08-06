@@ -1,0 +1,47 @@
+# Page snapshot
+
+```yaml
+- heading "🏛️ FUTURE CODING ACADEMY" [level=1]
+- paragraph: Choose your student profile to continue your coding journey
+- text: 🎮 luis Level 1 • 50 XP 🔒 PIN Protected 👤 sample_student Level 1 • 150 XP 🌈 tim Level 1 • 0 XP
+- button "➕ Create New Student"
+- link "👩‍🏫 Teacher View":
+  - /url: /teacher
+- heading "Create New Student" [level=2]
+- text: "Username:"
+- textbox "Enter your name": Test Student
+- text: "Create Your Avatar: 🎮 Your Avatar Preview Choose Icon:"
+- button "🎮"
+- button "🚀"
+- button "🌟"
+- button "⚡"
+- button "🔥"
+- button "💎"
+- button "🎯"
+- button "🏆"
+- button "🎨"
+- button "🔧"
+- button "💻"
+- button "🎵"
+- button "🌈"
+- button "⭐"
+- button "💫"
+- button "🎪"
+- text: "Choose Colors: Primary Secondary"
+- button
+- button
+- button
+- button
+- button
+- button
+- button
+- button
+- button
+- button
+- button
+- button
+- text: "Select a color, then click Primary or Secondary above to apply PIN (Optional - 4 digits for protection):"
+- textbox "1234"
+- button "Cancel"
+- button "Create Student"
+```
