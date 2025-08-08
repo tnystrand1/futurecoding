@@ -29,7 +29,11 @@ const PendingEvidence = () => {
                 skillData.evidence.aiChat || 
                 skillData.evidence.code || 
                 skillData.evidence.reflection || 
-                skillData.evidence.screenshot
+                skillData.evidence.screenshot ||
+                skillData.evidence['project-brief'] ||
+                skillData.evidence['client-feedback'] ||
+                skillData.evidence['refactored-code'] ||
+                skillData.evidence['test-results']
               );
               
               const isPending = (
@@ -251,6 +255,78 @@ const PendingEvidence = () => {
                         borderRadius: '4px'
                       }}
                     />
+                  </div>
+                </div>
+              )}
+
+              {item.evidence['project-brief'] && (
+                <div style={{ marginTop: '12px' }}>
+                  <strong>📋 Project Brief:</strong>
+                  <div style={{ 
+                    marginTop: '4px', 
+                    lineHeight: '1.5',
+                    whiteSpace: 'pre-wrap',
+                    padding: '8px',
+                    background: 'white',
+                    border: '1px solid #ddd',
+                    borderRadius: '4px'
+                  }}>
+                    {item.evidence['project-brief']}
+                  </div>
+                </div>
+              )}
+
+              {item.evidence['client-feedback'] && (
+                <div style={{ marginTop: '12px' }}>
+                  <strong>💬 Client Feedback:</strong>
+                  <div style={{ 
+                    marginTop: '4px', 
+                    lineHeight: '1.5',
+                    whiteSpace: 'pre-wrap',
+                    padding: '8px',
+                    background: 'white',
+                    border: '1px solid #ddd',
+                    borderRadius: '4px'
+                  }}>
+                    {item.evidence['client-feedback']}
+                  </div>
+                </div>
+              )}
+
+              {item.evidence['refactored-code'] && (
+                <div style={{ marginTop: '12px' }}>
+                  <strong>🔧 Refactored Code:</strong>
+                  <div style={{ 
+                    marginTop: '4px', 
+                    padding: '12px', 
+                    background: '#2d3748', 
+                    color: '#e2e8f0',
+                    border: '1px solid #4a5568',
+                    borderRadius: '4px',
+                    fontFamily: 'monospace',
+                    fontSize: '14px',
+                    whiteSpace: 'pre-wrap',
+                    overflow: 'auto',
+                    maxHeight: '300px'
+                  }}>
+                    {item.evidence['refactored-code']}
+                  </div>
+                </div>
+              )}
+
+              {item.evidence['test-results'] && (
+                <div style={{ marginTop: '12px' }}>
+                  <strong>🧪 Test Results:</strong>
+                  <div style={{ 
+                    marginTop: '4px', 
+                    lineHeight: '1.5',
+                    whiteSpace: 'pre-wrap',
+                    padding: '8px',
+                    background: 'white',
+                    border: '1px solid #ddd',
+                    borderRadius: '4px'
+                  }}>
+                    {item.evidence['test-results']}
                   </div>
                 </div>
               )}

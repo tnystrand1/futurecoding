@@ -4,6 +4,7 @@ import { SKILL_TREE } from '../../data/skillTreeData';
 import DocumentModal from '../Documentation/DocumentModal';
 import AchievementToast from '../Shared/AchievementToast';
 import LoadingSpinner from '../Shared/LoadingSpinner';
+import CodeCriticChat from '../AI/CodeCriticChat';
 import { useGameState } from '../../hooks/useGameState';
 import { GameLogic } from '../../utils/gameLogic';
 import '../../styles/civilization.css';
@@ -13,6 +14,7 @@ const CivDashboard = () => {
   const [selectedSkill, setSelectedSkill] = useState(null);
   const [showDocumentModal, setShowDocumentModal] = useState(false);
   const [showAchievement, setShowAchievement] = useState(null);
+  const [showAIChat, setShowAIChat] = useState(false);
   
   const {
     studentProgress,
@@ -41,12 +43,13 @@ const CivDashboard = () => {
   const handleSkillClick = (skill) => {
     const skillData = studentProgress.skills?.[skill.id];
     
-    // If skill was rejected, show rejection message
-    if (skillData?.evidence?.status === 'rejected' && skillData.evidence.rejectionMessage) {
-      alert(`This skill was rejected by your teacher:\n\n"${skillData.evidence.rejectionMessage}"\n\nYou can resubmit new evidence.`);
-    }
+    // Pass both skill definition and current student data for this skill
+    const enrichedSkill = {
+      ...skill,
+      studentData: skillData // This includes evidence, status, etc.
+    };
     
-    setSelectedSkill(skill);
+    setSelectedSkill(enrichedSkill);
     setShowDocumentModal(true);
   };
 
@@ -243,6 +246,39 @@ const CivDashboard = () => {
                 {unlockedSkillsCount}
               </div>
             </div>
+
+            {/* AI Chat Button */}
+            <button
+              onClick={() => setShowAIChat(true)}
+              style={{
+                marginTop: '15px',
+                width: '100%',
+                background: 'linear-gradient(135deg, #9147FF 0%, #764ba2 100%)',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                padding: '12px',
+                fontSize: '14px',
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                boxShadow: '0 4px 8px rgba(0,0,0,0.2)',
+                transition: 'all 0.3s ease',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px'
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.transform = 'translateY(-2px)';
+                e.target.style.boxShadow = '0 6px 12px rgba(0,0,0,0.3)';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.transform = 'translateY(0)';
+                e.target.style.boxShadow = '0 4px 8px rgba(0,0,0,0.2)';
+              }}
+            >
+              🤖 Chat with CodeCritic
+            </button>
           </div>
 
           {/* Competency Profile */}
@@ -800,6 +836,14 @@ const CivDashboard = () => {
 
       {showAchievement && (
         <AchievementToast achievement={showAchievement} />
+      )}
+
+      {showAIChat && (
+        <CodeCriticChat
+          studentId={studentId || 'sample_student'}
+          studentData={studentProgress}
+          onClose={() => setShowAIChat(false)}
+        />
       )}
     </div>
   );

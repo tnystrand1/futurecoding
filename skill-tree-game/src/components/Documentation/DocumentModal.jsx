@@ -3,19 +3,39 @@ import EvidenceUploader from './EvidenceUploader';
 import styles from './DocumentModal.module.css';
 
 const DocumentModal = ({ skill, onSubmit, onClose }) => {
+  // Check if there's existing evidence
+  const existingEvidence = skill.studentData?.evidence;
+  const hasExistingEvidence = existingEvidence && (
+    existingEvidence.reflection || 
+    existingEvidence.code || 
+    existingEvidence.screenshot || 
+    existingEvidence.aiChat ||
+    existingEvidence['project-brief'] ||
+    existingEvidence['client-feedback'] ||
+    existingEvidence['refactored-code'] ||
+    existingEvidence['test-results']
+  );
+  
+  console.log('DocumentModal Debug:', {
+    hasExistingEvidence,
+    existingEvidence,
+    skillStudentData: skill.studentData
+  });
+  
   const [evidence, setEvidence] = useState({
-    type: '',
-    reflection: '',
-    code: '',
-    screenshot: '',
-    aiChat: '',
+    type: existingEvidence?.type || '',
+    reflection: existingEvidence?.reflection || '',
+    code: existingEvidence?.code || '',
+    screenshot: existingEvidence?.screenshot || '',
+    aiChat: existingEvidence?.aiChat || '',
     // Custom evidence types
-    'project-brief': '',
-    'client-feedback': '',
-    'refactored-code': '',
-    'test-results': ''
+    'project-brief': existingEvidence?.['project-brief'] || '',
+    'client-feedback': existingEvidence?.['client-feedback'] || '',
+    'refactored-code': existingEvidence?.['refactored-code'] || '',
+    'test-results': existingEvidence?.['test-results'] || ''
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [viewMode, setViewMode] = useState(hasExistingEvidence ? 'view' : 'edit');
 
   const handleSubmit = async () => {
     // Validate evidence based on skill requirements
@@ -48,6 +68,64 @@ const DocumentModal = ({ skill, onSubmit, onClose }) => {
 
   const getWordCount = (text) => {
     return text.trim().split(/\s+/).filter(word => word.length > 0).length;
+  };
+
+  const renderEvidenceView = (evidenceType) => {
+    const fieldKey = evidenceType === 'ai-chat' ? 'aiChat' : evidenceType;
+    const value = evidence[fieldKey];
+    
+    if (!value) return null;
+    
+    return (
+      <div className={styles.field} key={`view-${evidenceType}`}>
+        <label style={{ fontWeight: 'bold', color: '#2c3e50' }}>
+          {evidenceType === 'ai-chat' ? 'AI Chat' : 
+           evidenceType === 'refactored-code' ? 'Refactored Code' :
+           evidenceType.charAt(0).toUpperCase() + evidenceType.slice(1)}
+        </label>
+        {evidenceType === 'screenshot' ? (
+          <div style={{ marginTop: '8px' }}>
+            <img 
+              src={value} 
+              alt="Evidence screenshot" 
+              style={{ 
+                maxWidth: '100%', 
+                maxHeight: '300px', 
+                border: '1px solid #ddd',
+                borderRadius: '4px'
+              }} 
+            />
+          </div>
+        ) : evidenceType === 'code' || evidenceType === 'refactored-code' ? (
+          <div style={{
+            background: '#f8f9fa',
+            border: '1px solid #e9ecef',
+            borderRadius: '4px',
+            padding: '12px',
+            marginTop: '8px',
+            fontFamily: 'Consolas, Monaco, "Courier New", monospace',
+            fontSize: '13px',
+            whiteSpace: 'pre-wrap',
+            overflow: 'auto',
+            maxHeight: '200px'
+          }}>
+            {value}
+          </div>
+        ) : (
+          <div style={{
+            background: '#f8f9fa',
+            border: '1px solid #e9ecef',
+            borderRadius: '4px',
+            padding: '12px',
+            marginTop: '8px',
+            whiteSpace: 'pre-wrap',
+            lineHeight: '1.4'
+          }}>
+            {value}
+          </div>
+        )}
+      </div>
+    );
   };
 
   const renderEvidenceField = (evidenceType) => {
@@ -184,9 +262,38 @@ const DocumentModal = ({ skill, onSubmit, onClose }) => {
     <div className={styles.overlay}>
       <div className={styles.modal}>
         <div className={styles.header}>
-          <h2>Unlock: {skill.name}</h2>
+          <h2>{hasExistingEvidence ? `${skill.name} Evidence` : `Unlock: ${skill.name}`}</h2>
           <button className={styles.closeButton} onClick={onClose}>×</button>
         </div>
+        
+        {/* Status Banner */}
+        {existingEvidence && (
+          <div style={{
+            background: existingEvidence.status === 'approved' ? '#d4edda' :
+                       existingEvidence.status === 'rejected' ? '#f8d7da' :
+                       '#fff3cd',
+            color: existingEvidence.status === 'approved' ? '#155724' :
+                   existingEvidence.status === 'rejected' ? '#721c24' :
+                   '#856404',
+            padding: '12px',
+            margin: '0 20px',
+            borderRadius: '4px',
+            border: `1px solid ${existingEvidence.status === 'approved' ? '#c3e6cb' :
+                                 existingEvidence.status === 'rejected' ? '#f5c6cb' :
+                                 '#ffeeba'}`,
+            fontSize: '14px',
+            fontWeight: 'bold'
+          }}>
+            Status: {existingEvidence.status === 'approved' ? '✅ Approved' :
+                      existingEvidence.status === 'rejected' ? '❌ Rejected' :
+                      '⏳ Pending Teacher Approval'}
+            {existingEvidence.status === 'rejected' && existingEvidence.rejectionMessage && (
+              <div style={{ marginTop: '8px', fontWeight: 'normal' }}>
+                <strong>Teacher's Message:</strong> {existingEvidence.rejectionMessage}
+              </div>
+            )}
+          </div>
+        )}
         
         <div className={styles.body}>
           <div className={styles.requirements}>
@@ -200,22 +307,80 @@ const DocumentModal = ({ skill, onSubmit, onClose }) => {
           </div>
           
           <div className={styles.evidenceForm}>
-            <h3>Your Evidence:</h3>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+              <h3>Your Evidence:</h3>
+              {hasExistingEvidence && (
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => setViewMode('view')}
+                    style={{
+                      background: viewMode === 'view' ? '#007bff' : '#6c757d',
+                      color: 'white',
+                      border: 'none',
+                      padding: '6px 12px',
+                      borderRadius: '4px',
+                      marginRight: '8px',
+                      cursor: 'pointer',
+                      fontSize: '12px'
+                    }}
+                  >
+                    👁️ View
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setViewMode('edit')}
+                    style={{
+                      background: viewMode === 'edit' ? '#007bff' : '#6c757d',
+                      color: 'white',
+                      border: 'none',
+                      padding: '6px 12px',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      fontSize: '12px'
+                    }}
+                  >
+                    ✏️ {hasExistingEvidence ? 'Resubmit' : 'Edit'}
+                  </button>
+                </div>
+              )}
+            </div>
             
-            {skill.unlockCriteria.evidence.map(evidenceType => 
-              renderEvidenceField(evidenceType)
+            {viewMode === 'view' && hasExistingEvidence ? (
+              // View Mode - Show existing evidence
+              <div>
+                {skill.unlockCriteria.evidence.map(evidenceType => 
+                  renderEvidenceView(evidenceType)
+                )}
+              </div>
+            ) : (
+              // Edit Mode - Show form fields
+              <div>
+                {skill.unlockCriteria.evidence.map(evidenceType => 
+                  renderEvidenceField(evidenceType)
+                )}
+              </div>
             )}
           </div>
         </div>
         
         <div className={styles.footer}>
-          <button 
-            className="pixel-button"
-            onClick={handleSubmit}
-            disabled={isSubmitting || !validateEvidence()}
-          >
-            {isSubmitting ? 'Submitting...' : 'Submit Evidence'}
-          </button>
+          {viewMode === 'edit' ? (
+            <button 
+              className="pixel-button"
+              onClick={handleSubmit}
+              disabled={isSubmitting || !validateEvidence()}
+            >
+              {isSubmitting ? 'Submitting...' : hasExistingEvidence ? 'Resubmit Evidence' : 'Submit Evidence'}
+            </button>
+          ) : (
+            <button 
+              className="pixel-button"
+              onClick={() => setViewMode('edit')}
+            >
+              Submit New Evidence
+            </button>
+          )}
         </div>
       </div>
     </div>

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { collection, getDocs, doc, updateDoc } from 'firebase/firestore';
 import { db } from '../../utils/firebase-config';
 import PendingEvidence from './PendingEvidence';
+import ChatLogViewer from './ChatLogViewer';
 
 const TeacherView = () => {
   const [students, setStudents] = useState([]);
@@ -11,7 +12,7 @@ const TeacherView = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [password, setPassword] = useState('');
   const [authError, setAuthError] = useState('');
-  const [activeTab, setActiveTab] = useState('students'); // 'students' or 'pending'
+  const [activeTab, setActiveTab] = useState('students'); // 'students', 'pending', or 'chatlogs'
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -312,6 +313,22 @@ const TeacherView = () => {
           >
             ⏳ Pending Evidence
           </button>
+          <button
+            onClick={() => setActiveTab('chatlogs')}
+            style={{
+              flex: 1,
+              padding: '16px 24px',
+              background: activeTab === 'chatlogs' ? '#7c3aed' : 'transparent',
+              color: activeTab === 'chatlogs' ? 'white' : '#374151',
+              border: 'none',
+              fontSize: '16px',
+              fontWeight: 'bold',
+              cursor: 'pointer',
+              transition: 'all 0.2s'
+            }}
+          >
+            🤖 AI Chat Logs
+          </button>
         </div>
 
         {/* Tab Content */}
@@ -487,6 +504,17 @@ const TeacherView = () => {
             boxShadow: '0 8px 32px rgba(0,0,0,0.2)'
           }}>
             <PendingEvidence />
+          </div>
+        )}
+
+        {/* AI Chat Logs Tab */}
+        {activeTab === 'chatlogs' && (
+          <div style={{
+            background: 'white',
+            borderRadius: '0 0 12px 12px',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.2)'
+          }}>
+            <ChatLogViewer />
           </div>
         )}
 
