@@ -12,17 +12,14 @@ const SkillTree = ({ studentId, studentProgress, onSkillClick }) => {
   };
   
   const isSkillAvailable = (skill) => {
-    if (skill.tier === 1) return true;
+    // Make all skills available for evidence submission
+    return true;
     
-    const prereqsMet = skill.prerequisites.every(prereq => 
-      isSkillUnlocked(prereq)
-    );
-    
-    const altPathMet = skill.alternativePaths?.some(path =>
-      path.every(skillId => isSkillUnlocked(skillId))
-    ) || false;
-    
-    return prereqsMet || altPathMet;
+    // Original logic (commented out):
+    // if (skill.tier === 1) return true;
+    // const prereqsMet = skill.prerequisites.every(prereq => isSkillUnlocked(prereq));
+    // const altPathMet = skill.alternativePaths?.some(path => path.every(skillId => isSkillUnlocked(skillId))) || false;
+    // return prereqsMet || altPathMet;
   };
   
   return (

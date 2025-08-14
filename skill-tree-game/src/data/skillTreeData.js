@@ -26,7 +26,7 @@ export const SKILL_TREE = {
     xpReward: 50,
     prerequisites: [],
     unlockCriteria: {
-      evidence: ['reflection', 'screenshot'],
+      evidence: ['reflection'],
       prompt: "Document your client interview process and key insights"
     },
     featuresUnlocked: ['contact-form', 'about-section'],
@@ -63,6 +63,38 @@ export const SKILL_TREE = {
     },
     featuresUnlocked: ['basic-layout'],
     description: "Turn ideas into working code"
+  },
+  
+  image_generation: {
+    id: 'image_generation',
+    name: 'Image Generation',
+    tier: 1,
+    position: { x: 900, y: 500 },
+    competency: 'Communication',
+    xpReward: 50,
+    prerequisites: [],
+    unlockCriteria: {
+      evidence: ['ai-chat', 'screenshot'],
+      prompt: "Submit your AI image prompt and the generated image"
+    },
+    featuresUnlocked: ['custom-images', 'visual-content'],
+    description: "Learn to communicate ideas through AI-generated images"
+  },
+  
+  image_embedding: {
+    id: 'image_embedding',
+    name: 'Image Embedding',
+    tier: 1,
+    position: { x: 1100, y: 500 },
+    competency: 'STEAM Interest',
+    xpReward: 50,
+    prerequisites: [],
+    unlockCriteria: {
+      evidence: ['code', 'reflection'],
+      prompt: "Submit a line of HTML code for an embedded image and describe how the image appears on the page (position, size, border, etc.)"
+    },
+    featuresUnlocked: ['image-embedding', 'visual-layout'],
+    description: "Master the art of embedding and positioning images in web pages"
   },
   
   // TIER 2: APPLICATIONS
@@ -160,6 +192,22 @@ export const SKILL_TREE = {
     },
     featuresUnlocked: ['collaboration-badge'],
     description: "Learn from and help your peers"
+  },
+  
+  advanced_css: {
+    id: 'advanced_css',
+    name: 'Advanced CSS',
+    tier: 2,
+    position: { x: 800, y: 350 },
+    competency: 'Continuous Learning',
+    xpReward: 100,
+    prerequisites: ['code_implementation'],
+    unlockCriteria: {
+      evidence: ['reflection', 'screenshot'],
+      prompt: "Describe an advanced CSS feature you implemented (animation, hero section, hover effects, etc.), explain why you chose it, and provide a screenshot of the actual feature"
+    },
+    featuresUnlocked: ['advanced-css-features', 'animations', 'responsive-design'],
+    description: "Master advanced CSS techniques for stunning visual effects"
   },
   
   // TIER 3: SPECIALIZATIONS

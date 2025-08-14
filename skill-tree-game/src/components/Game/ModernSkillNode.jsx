@@ -3,7 +3,7 @@ import { Card, CardContent } from '../ui/Card';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
 import { cn, formatTierName, getSkillStateClass } from '../../lib/utils';
-import { CheckCircle, Lock, Zap, Star } from 'lucide-react';
+
 
 const ModernSkillNode = ({ 
   skill, 
@@ -23,19 +23,7 @@ const ModernSkillNode = ({
     return 'locked';
   };
 
-  const getSkillIcon = () => {
-    const state = getSkillState();
-    switch (state) {
-      case 'completed':
-        return <Star className="w-5 h-5 text-yellow-500 fill-current" />;
-      case 'unlocked':
-        return <CheckCircle className="w-5 h-5 text-green-500" />;
-      case 'available':
-        return <Zap className="w-5 h-5 text-blue-500 animate-pulse" />;
-      default:
-        return <Lock className="w-4 h-4 text-gray-400" />;
-    }
-  };
+
 
   const getTierColor = () => {
     const colors = {
@@ -107,10 +95,7 @@ const ModernSkillNode = ({
         }}
         onClick={handleClick}
       >
-        {/* Skill Icon */}
-        <div style={{ marginBottom: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          {getSkillIcon()}
-        </div>
+
 
         {/* Skill Name */}
         <h4 style={{ 
@@ -118,7 +103,7 @@ const ModernSkillNode = ({
           fontWeight: '600', 
           color: '#1f2937', 
           lineHeight: '1.2', 
-          marginBottom: '4px',
+          marginBottom: '8px',
           textAlign: 'center'
         }}>
           {skill.name}

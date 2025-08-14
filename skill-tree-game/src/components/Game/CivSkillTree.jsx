@@ -187,7 +187,6 @@ const CivSkillTree = ({ studentId, studentProgress, onSkillClick }) => {
         >
           <div className="civ-skill-icon">
             {isSkillUnlocked(skill.id) ? '✓' : 
-             !isSkillAvailable(skill) ? '🔒' : 
              getSkillIcon(skill)}
           </div>
           <div className="civ-skill-name">{skill.name}</div>

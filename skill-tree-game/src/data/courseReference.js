@@ -145,68 +145,80 @@ const courseData = {
       },
       {
         "day": 3,
-        "title": "Advanced Skills & Professional Preparation",
-        "objective": "Students will develop advanced web features using AI tools strategically and ethically while creating professional portfolios and resumes that showcase both technical skills and communication abilities.",
+        "title": "Advanced CSS & First Client Practice",
+        "objective": "Students will integrate advanced CSS features into their websites while getting their first taste of 'client' work through creative projects with unconventional subjects. They will support peer learning through constructive feedback and collaborative problem-solving.",
         "learningTargets": [
-          "Create advanced, professional-quality websites using strategic AI prompting and ethical decision-making.",
-          "Build and present professional materials that showcase growth as critical technologists by curating a portfolio connecting technical skills to community impact.",
-          "Support peer learning through constructive feedback and collaborative problem-solving."
+          "Integrate advanced CSS features into your website",
+          "Get your first taste of 'client' work",
+          "Support peer learning through constructive feedback and collaborative problem solving"
         ],
         "keyConcepts": [
-          "Advanced AI Prompting",
-          "Website Debugging/Enhancement",
-          "Professional Identity",
-          "Digital Portfolios",
-          "Resume Building",
-          "Peer Feedback"
+          "Advanced CSS Features",
+          "Client Work Simulation",
+          "Photography for Web",
+          "Brand Development",
+          "Color Theory (coolors.io)",
+          "Typography Pairing (fontjoy.com)",
+          "Hero Sections",
+          "Responsive Design",
+          "CSS Animations",
+          "AI Ethics Spectrum"
         ],
         "agenda": [
           {
             "time_period": "Morning",
             "time_range": "10:30-12:30",
-            "title": "Advanced Coding",
+            "title": "Human LLMs & Client Website Creation",
             "activities": [
               {
                 "time": "10:30-11:00",
-                "title": "Opening Circle - Prompt Battle",
-                "description": "A quick-fire challenge where students use AI to create a simple, single-page 'About Me' website."
+                "title": "Opening Circle - Human LLMs",
+                "description": "Partner up with a student you haven't worked with before. One student acts as the 'prompter' and the other as the 'LLM', following role card instructions to simulate AI-human interaction."
               },
               {
                 "time": "11:00-12:30",
-                "title": "Advance Coding Workshop",
-                "description": "Students choose one of two flawed websites to improve. Phase 1 involves identifying 3 specific issues and documenting the AI prompts to solve them. Phase 2 is implementing those AI solutions to enhance the website."
+                "title": "Creating Tiny 'Client' Websites",
+                "description": "Working with the same partner from opening circle, students go outside to find an unusual 'client' (an ant, blade of grass, crack in sidewalk, fallen leaf). They photograph their subject from multiple angles, take notes, and create a website that boldly showcases their client to the world. Must include: embedded images, brand development using coolors.io for color palette, fontjoy.com for font pairing. Advanced features include hero sections, navbars, cards, hover effects, CSS animations, and gradients.",
+                "llm_guidance": "When students ask for help with their client websites, provide them with complete, functional starting code that includes basic HTML structure, CSS styling, and image embedding. Then ask them which advanced CSS features they'd like to add from these suggestions: hero sections with large background images, scroll-triggered animations, hover effects and transitions, CSS Grid or Flexbox layouts, gradient backgrounds, card designs with shadows, navigation bars with smooth scrolling, responsive design breakpoints, CSS animations and keyframes, or parallax scrolling effects. Provide step-by-step implementation guidance for their chosen features."
               }
             ]
           },
           {
             "time_period": "Afternoon",
             "time_range": "1:00-4:00",
-            "title": "Professional Identity",
+            "title": "AI Ethics & Choice Point Projects",
             "activities": [
               {
-                "time": "1:00-2:30",
-                "title": "Professional Identity Workshop (Digital Portfolio and Resume)",
-                "description": "This workshop is done in three phases. Phase 1: Personal Story Development, where students craft their professional origin story. Phase 2: AI Portfolio Building, where students begin creating a digital portfolio, starting with an 'About Me' page. Phase 3: Resume Outline Creation, where students use AI to develop a resume outline with a professional summary, skills, and projects."
+                "time": "1:00-1:15",
+                "title": "Afternoon Opening Circle - AI Ethics Spectrum",
+                "description": "Students position themselves on a spectrum based on their stance on AI ethics scenarios: using ChatGPT for essay drafts, teacher guidelines for AI use, AI as tutoring tool, taking credit for AI-generated code, and whether AI assistants make learning code pointless."
               },
               {
-                "time": "2:30-3:45",
-                "title": "Portfolio Discussion Circles & Revision",
-                "description": "Students conduct a gallery walk of their peers' new portfolios and resumes. They then provide constructive feedback in small groups using sticky notes. Afterwards, students use this feedback to revise their own materials."
+                "time": "1:15-3:15",
+                "title": "Choose Your Own Adventure",
+                "description": "Students choose from three paths: 1) Finish and deploy their current project with incredible features, 2) Build a professional portfolio website highlighting AI use as an asset, or 3) Partner-code a website with AI assistance but writing their own code. All choices must include advanced CSS features from the morning.",
+                "llm_guidance": "For all three project paths, provide complete starter code when requested. For existing projects, help students identify where to add advanced features. For portfolio sites, provide a professional template structure. For partner-coding, offer both HTML/CSS starting templates and debugging assistance. Always suggest specific advanced CSS features: responsive navigation, image galleries with lightbox effects, smooth scrolling sections, CSS animations for page transitions, interactive buttons and forms, card layouts with hover effects, or modern typography with custom fonts. Guide implementation step-by-step."
+              },
+              {
+                "time": "3:15-3:45",
+                "title": "Project Showcase - Tables Only",
+                "description": "At their tables, students present their afternoon projects. After each presentation, peers share one glow and one grow/question/wondering, using names to build community before meeting real clients tomorrow."
               },
               {
                 "time": "3:45-4:00",
                 "title": "Closing Circle",
-                "description": "Students reflect on their most effective prompting strategies and how their relationship with AI has changed over the first three days."
+                "description": "Students share their favorite moment from the day."
               }
             ]
           }
         ],
         "deliverables": [
-          "'About Me' website",
-          "Improved/fixed website",
-          "Personal origin story statement",
-          "Digital portfolio draft",
-          "Resume outline"
+          "Photographed 'client' subject from multiple angles",
+          "Website showcasing unusual client with advanced CSS features",
+          "Color palette from coolors.io",
+          "Font pairing from fontjoy.com",
+          "Choice project (enhanced existing work, portfolio site, or partner-coded website)",
+          "Peer feedback using glow/grow format"
         ]
       },
       {

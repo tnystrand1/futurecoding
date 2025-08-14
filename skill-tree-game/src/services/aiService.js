@@ -19,7 +19,7 @@ class AIService {
   constructor() {
     this.apiKey = import.meta.env.VITE_OPENROUTER_API_KEY;
     this.baseUrl = 'https://openrouter.ai/api/v1/chat/completions';
-          this.model = 'openai/o4-mini'; //
+          this.model = 'anthropic/claude-sonnet-4'; //
   }
 
   // Persona definitions for CodeCritic V10
@@ -273,7 +273,7 @@ Your goal: Be a focused, efficient teacher who gets students coding quickly whil
   }
 
   // Send message to AI (OpenRouter)
-  async sendMessage(conversationId, userMessage, persona = 'valkyrae') {
+  async sendMessage(conversationId, userMessage, persona = 'valkyrae', imageData = null) {
     try {
       if (!this.apiKey) {
         throw new Error('OpenRouter API key not configured');
@@ -323,28 +323,51 @@ Your goal: Be a focused, efficient teacher who gets students coding quickly whil
         ...recentHistory.slice(0, -1).map(msg => ({  // Previous history
           role: msg.isUser ? 'user' : 'assistant',
           content: msg.content
-        })),
-        {
-          role: 'user',
-          content: userMessage  // Current user message
-        }
+        }))
       ];
 
-      // Call OpenRouter API
+      // Create current user message with optional image
+      const currentUserMessage = {
+        role: 'user'
+      };
+
+      if (imageData) {
+        // Handle image message with vision capabilities
+        currentUserMessage.content = [
+          {
+            type: 'text',
+            text: userMessage || 'Please analyze this image and help me debug any issues you see.'
+          },
+          {
+            type: 'image_url',
+            image_url: {
+              url: imageData
+            }
+          }
+        ];
+      } else {
+        // Regular text message
+        currentUserMessage.content = userMessage;
+      }
+
+      messages.push(currentUserMessage);
+
+      // Call OpenRouter API with retry logic for network issues
       const response = await fetch(this.baseUrl, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${this.apiKey}`,
           'Content-Type': 'application/json',
           'HTTP-Referer': window.location.origin,
-          'X-Title': 'FUTURE CODING ACADEMY - CodeCritic V10'
+          'X-Title': 'FUTURE CODING ACADEMY - CodeCritic'
         },
         body: JSON.stringify({
           model: this.model,
           messages: messages,
           temperature: 0.7,
-          max_tokens: 1000,
-          top_p: 0.9
+          max_tokens: 64000, // Further increased for longer code examples
+          top_p: 0.9,
+          stream: false // Ensure non-streaming for complete responses
         })
       });
 
@@ -373,9 +396,28 @@ Your goal: Be a focused, efficient teacher who gets students coding quickly whil
       const data = await response.json();
       console.log('🤖 OpenRouter API Response:', data);
       
+      // Enhanced error handling with debugging info
       const aiResponse = data.choices?.[0]?.message?.content || 
-                        data.content || 
-                        'Sorry, I encountered an error generating a response.';
+                        data.content;
+
+      if (!aiResponse) {
+        console.error('🚨 AI Response Debug:', {
+          fullResponse: data,
+          choices: data.choices,
+          hasContent: !!data.content,
+          model: this.model
+        });
+        
+        // Save error message for user feedback
+        const errorMessage = 'Sorry, I encountered an error generating a response. Please try again.';
+        await this.saveMessage(conversationId, errorMessage, false);
+        
+        return {
+          success: false,
+          message: errorMessage,
+          error: 'Empty response from AI service'
+        };
+      }
       
       console.log('🗨️ AI Response:', aiResponse);
 
@@ -394,8 +436,19 @@ Your goal: Be a focused, efficient teacher who gets students coding quickly whil
     } catch (error) {
       console.error('Error sending message to AI:', error);
       
-      // Save error message
-      const errorMessage = `Sorry, I'm having trouble connecting right now. Error: ${error.message}`;
+      // Enhanced error handling for network issues
+      let errorMessage = 'Sorry, I am having trouble connecting right now.';
+      
+      if (error.name === 'TypeError' && error.message.includes('fetch')) {
+        errorMessage = 'Network connection issue. Please check your internet connection and try again.';
+      } else if (error.message.includes('ERR_HTTP2_PROTOCOL_ERROR')) {
+        errorMessage = 'Connection protocol error. Retrying may help.';
+      } else if (error.message.includes('ERR_QUIC_PROTOCOL_ERROR')) {
+        errorMessage = 'Network protocol error. Please try again in a moment.';
+      } else {
+        errorMessage = `Connection error: ${error.message}`;
+      }
+      
       await this.saveMessage(conversationId, errorMessage, false);
       
       return {
@@ -509,13 +562,13 @@ Your goal: Be a focused, efficient teacher who gets students coding quickly whil
       const updates = {};
       
       // Detect project mentions and update project history
-      const projectKeywords = ['website', 'duck', 'project', 'jamaica pond', 'building', 'making'];
+      const projectKeywords = ['website', 'project', 'building', 'making', 'creating', 'developing'];
       const hasProjectMention = projectKeywords.some(keyword => 
         userMessage.toLowerCase().includes(keyword) || aiResponse.toLowerCase().includes(keyword)
       );
       
       if (hasProjectMention) {
-        const projectUpdate = `Working on duck website project for Jamaica Pond - ${new Date().toLocaleDateString()}`;
+        const projectUpdate = `Working on web development project - ${new Date().toLocaleDateString()}`;
         if (!memory.project_history.includes(projectUpdate)) {
           memory.project_history.push(projectUpdate);
           updates.project_history = memory.project_history.slice(-5); // Keep last 5
@@ -525,7 +578,7 @@ Your goal: Be a focused, efficient teacher who gets students coding quickly whil
         if (!memory.skill_tree_progress.current_archetype) {
           updates.skill_tree_progress = {
             ...memory.skill_tree_progress,
-            current_archetype: 'Duck Website Project'
+            current_archetype: 'Web Development Project'
           };
         }
       }
@@ -535,7 +588,7 @@ Your goal: Be a focused, efficient teacher who gets students coding quickly whil
         const skillUpdate = {
           timestamp: new Date().toISOString(),
           skill_name: 'HTML Structure',
-          context: 'Learned basic HTML for duck website'
+          context: 'Learned basic HTML structure and elements'
         };
         
         const hasSkill = memory.skill_acquisition_log.some(s => s.skill_name === 'HTML Structure');
@@ -546,7 +599,7 @@ Your goal: Be a focused, efficient teacher who gets students coding quickly whil
       }
       
       // Update last action
-      updates.last_action = `Discussed ${hasProjectMention ? 'duck project' : 'coding topics'}`;
+      updates.last_action = `Discussed ${hasProjectMention ? 'web project' : 'coding topics'}`;
       updates.lastUpdated = new Date().toISOString();
       
       if (Object.keys(updates).length > 0) {

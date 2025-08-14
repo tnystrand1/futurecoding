@@ -20,10 +20,7 @@ const SkillNode = ({ skill, unlocked, available, onHover, onClick }) => {
       onMouseLeave={() => onHover(null)}
       onClick={onClick}
     >
-      <div className={styles.icon}>
-        {unlocked && '✓'}
-        {!unlocked && !available && '🔒'}
-      </div>
+
       <div className={styles.name}>{skill.name}</div>
       <div className={styles.tier}>Tier {skill.tier}</div>
     </div>

@@ -5,6 +5,7 @@ import CivDashboard from './components/Student/CivDashboard';
 import ModernDashboard from './components/Student/ModernDashboard';
 import UserSelector from './components/Student/UserSelector';
 import TeacherView from './components/Admin/TeacherView';
+import WorkingMessagingTest from './components/Messaging/WorkingMessagingTest';
 import { useFeatureFlags } from './hooks/useFeatureFlags';
 import './styles/tailwind.css';
 import './styles/globals.css';
@@ -40,6 +41,9 @@ function AppContent() {
         
         {/* Teacher/Admin route */}
         <Route path="/teacher" element={<TeacherView />} />
+        
+        {/* Enhanced Messaging Test Route */}
+        <Route path="/test-messaging" element={<WorkingMessagingTest />} />
       </Routes>
 
       {/* Back to User Selection Button - Now reactive to location changes */}

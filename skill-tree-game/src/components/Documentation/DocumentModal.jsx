@@ -3,9 +3,9 @@ import EvidenceUploader from './EvidenceUploader';
 import styles from './DocumentModal.module.css';
 
 const DocumentModal = ({ skill, onSubmit, onClose }) => {
-  // Check if there's existing evidence
-  const existingEvidence = skill.studentData?.evidence;
-  const hasExistingEvidence = existingEvidence && (
+  // Check if there's existing evidence - memoized to prevent re-computation
+  const existingEvidence = useMemo(() => skill.studentData?.evidence, [skill.studentData?.evidence]);
+  const hasExistingEvidence = useMemo(() => existingEvidence && (
     existingEvidence.reflection || 
     existingEvidence.code || 
     existingEvidence.screenshot || 
@@ -14,15 +14,11 @@ const DocumentModal = ({ skill, onSubmit, onClose }) => {
     existingEvidence['client-feedback'] ||
     existingEvidence['refactored-code'] ||
     existingEvidence['test-results']
-  );
+  ), [existingEvidence]);
   
-  console.log('DocumentModal Debug:', {
-    hasExistingEvidence,
-    existingEvidence,
-    skillStudentData: skill.studentData
-  });
+  // Debug logging removed to prevent console spam
   
-  const [evidence, setEvidence] = useState({
+  const [evidence, setEvidence] = useState(() => ({
     type: existingEvidence?.type || '',
     reflection: existingEvidence?.reflection || '',
     code: existingEvidence?.code || '',
@@ -33,7 +29,7 @@ const DocumentModal = ({ skill, onSubmit, onClose }) => {
     'client-feedback': existingEvidence?.['client-feedback'] || '',
     'refactored-code': existingEvidence?.['refactored-code'] || '',
     'test-results': existingEvidence?.['test-results'] || ''
-  });
+  }));
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [viewMode, setViewMode] = useState(hasExistingEvidence ? 'view' : 'edit');
 

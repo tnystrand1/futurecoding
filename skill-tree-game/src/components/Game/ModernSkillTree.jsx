@@ -23,19 +23,21 @@ const ModernSkillTree = ({ studentProgress, onSkillClick }) => {
       const isUnlocked = skillProgress?.unlocked || false;
       const isCompleted = skillProgress?.completed || false;
       
-      // Check if skill is available
-      let isAvailable = false;
-      if (skill.tier === 1) {
-        isAvailable = true;
-      } else {
-        const prereqsMet = skill.prerequisites.every(prereq => 
-          studentProgress?.skills?.[prereq]?.unlocked
-        );
-        const altPathMet = skill.alternativePaths?.some(path =>
-          path.every(skillId => studentProgress?.skills?.[skillId]?.unlocked)
-        ) || false;
-        isAvailable = prereqsMet || altPathMet;
-      }
+      // Check if skill is available - make all skills available for evidence submission
+      let isAvailable = true;
+      
+      // Original logic (commented out):
+      // if (skill.tier === 1) {
+      //   isAvailable = true;
+      // } else {
+      //   const prereqsMet = skill.prerequisites.every(prereq => 
+      //     studentProgress?.skills?.[prereq]?.unlocked
+      //   );
+      //   const altPathMet = skill.alternativePaths?.some(path =>
+      //     path.every(skillId => studentProgress?.skills?.[skillId]?.unlocked)
+      //   ) || false;
+      //   isAvailable = prereqsMet || altPathMet;
+      // }
 
       states[skill.id] = {
         unlocked: isUnlocked,
@@ -311,10 +313,7 @@ const ModernSkillTree = ({ studentProgress, onSkillClick }) => {
                     <div className="w-3 h-3 bg-blue-100 border border-blue-200 rounded animate-pulse" />
                     <span>Available to Unlock</span>
                   </div>
-                  <div className="flex items-center space-x-2 text-xs">
-                    <div className="w-3 h-3 bg-gray-100 border border-gray-200 rounded opacity-60" />
-                    <span>Locked Skills</span>
-                  </div>
+
                   <div className="flex items-center space-x-2 text-xs">
                     <div className="w-3 h-3 bg-yellow-100 border border-yellow-200 rounded" />
                     <span>Completed Skills</span>
@@ -347,8 +346,7 @@ const ModernSkillTree = ({ studentProgress, onSkillClick }) => {
                                 skillStates[hoveredSkill.id]?.available ? "available" : "locked"}
                       >
                         {skillStates[hoveredSkill.id]?.completed ? "Completed" :
-                         skillStates[hoveredSkill.id]?.unlocked ? "Unlocked" :
-                         skillStates[hoveredSkill.id]?.available ? "Available" : "Locked"}
+                         skillStates[hoveredSkill.id]?.unlocked ? "Unlocked" : "Available"}
                       </Badge>
                     </div>
                   </CardContent>

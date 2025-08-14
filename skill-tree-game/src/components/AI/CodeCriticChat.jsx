@@ -13,7 +13,10 @@ const CodeCriticChat = ({ studentId, studentData, onClose }) => {
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
   const [showDaySelector, setShowDaySelector] = useState(false);
   const [currentDay, setCurrentDay] = useState(1);
+  const [uploadedImage, setUploadedImage] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
   const messagesEndRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   // Persona definitions with visual styling
   const personas = {
@@ -229,9 +232,10 @@ const CodeCriticChat = ({ studentId, studentData, onClose }) => {
 
   // Send message
   const handleSendMessage = async () => {
-    if (!inputMessage.trim() || !conversationId || isLoading) return;
+    if ((!inputMessage.trim() && !uploadedImage) || !conversationId || isLoading) return;
 
     const userMessage = inputMessage.trim();
+    const imageData = uploadedImage;
     setInputMessage('');
     setIsLoading(true);
 
@@ -239,13 +243,17 @@ const CodeCriticChat = ({ studentId, studentData, onClose }) => {
     const newUserMessage = {
       id: Date.now().toString(),
       content: userMessage,
+      image: imagePreview,
       isUser: true,
       timestamp: new Date()
     };
     setMessages(prev => [...prev, newUserMessage]);
 
+    // Clear image after sending
+    handleRemoveImage();
+
     try {
-      const response = await aiService.sendMessage(conversationId, userMessage, selectedPersona);
+      const response = await aiService.sendMessage(conversationId, userMessage, selectedPersona, imageData);
       
       if (response.success) {
         // Add AI response to UI
@@ -271,6 +279,41 @@ const CodeCriticChat = ({ studentId, studentData, onClose }) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();
+    }
+  };
+
+  // Handle image upload
+  const handleImageUpload = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      // Check file size (max 10MB)
+      if (file.size > 10 * 1024 * 1024) {
+        alert('Image file size must be less than 10MB');
+        return;
+      }
+
+      // Check file type
+      if (!file.type.startsWith('image/')) {
+        alert('Please select an image file');
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const base64Data = e.target.result;
+        setUploadedImage(base64Data);
+        setImagePreview(URL.createObjectURL(file));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // Remove uploaded image
+  const handleRemoveImage = () => {
+    setUploadedImage(null);
+    setImagePreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
     }
   };
 
@@ -653,8 +696,24 @@ const CodeCriticChat = ({ studentId, studentData, onClose }) => {
                   }}
                 >
                   {message.isUser || message.isSystemMessage ? (
-                    <div style={{ whiteSpace: 'pre-wrap' }}>
-                      {message.content}
+                    <div>
+                      {message.image && (
+                        <div style={{ marginBottom: '8px' }}>
+                          <img 
+                            src={message.image} 
+                            alt="User uploaded" 
+                            style={{ 
+                              maxWidth: '200px', 
+                              maxHeight: '200px', 
+                              borderRadius: '8px',
+                              border: '1px solid #ddd'
+                            }} 
+                          />
+                        </div>
+                      )}
+                      <div style={{ whiteSpace: 'pre-wrap' }}>
+                        {message.content}
+                      </div>
                     </div>
                   ) : (
                     <MessageFormatter
@@ -734,49 +793,137 @@ const CodeCriticChat = ({ studentId, studentData, onClose }) => {
             borderTop: '1px solid #e9ecef',
             background: 'white'
           }}>
+            {/* Image Preview */}
+            {imagePreview && (
+              <div style={{
+                marginBottom: '12px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '8px',
+                background: '#f8f9fa',
+                borderRadius: '8px',
+                border: '1px solid #e9ecef'
+              }}>
+                <img 
+                  src={imagePreview} 
+                  alt="Upload preview" 
+                  style={{ 
+                    width: '40px', 
+                    height: '40px', 
+                    objectFit: 'cover', 
+                    borderRadius: '4px' 
+                  }} 
+                />
+                <span style={{ flex: 1, fontSize: '14px', color: '#666' }}>
+                  Image ready to send
+                </span>
+                <button
+                  onClick={handleRemoveImage}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: '#dc3545',
+                    cursor: 'pointer',
+                    fontSize: '16px',
+                    padding: '4px',
+                    borderRadius: '4px'
+                  }}
+                  title="Remove image"
+                >
+                  ×
+                </button>
+              </div>
+            )}
+
             <div style={{
               display: 'flex',
               gap: '12px',
               alignItems: 'flex-end'
             }}>
-              <textarea
-                value={inputMessage}
-                onChange={(e) => setInputMessage(e.target.value)}
-                onKeyPress={handleKeyPress}
-                placeholder="Ask CodeCritic anything about coding, AI, or your project..."
-                style={{
-                  flex: 1,
-                  padding: '12px',
-                  border: '2px solid #e9ecef',
-                  borderRadius: '12px',
-                  resize: 'none',
-                  fontSize: '14px',
-                  minHeight: '44px',
-                  maxHeight: '120px',
-                  outline: 'none',
-                  fontFamily: 'inherit'
-                }}
-                rows={1}
-                disabled={isLoading}
-              />
+              <div style={{ position: 'relative', flex: 1 }}>
+                <textarea
+                  value={inputMessage}
+                  onChange={(e) => setInputMessage(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                  placeholder="Ask CodeCritic anything about coding, AI, or your project..."
+                  style={{
+                    width: '100%',
+                    padding: '12px 40px 12px 12px',
+                    border: '2px solid #e9ecef',
+                    borderRadius: '12px',
+                    resize: 'none',
+                    fontSize: '14px',
+                    minHeight: '44px',
+                    maxHeight: '120px',
+                    outline: 'none',
+                    fontFamily: 'inherit'
+                  }}
+                  rows={1}
+                  disabled={isLoading}
+                />
+                
+                {/* Image Upload Button */}
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isLoading}
+                  style={{
+                    position: 'absolute',
+                    right: '8px',
+                    bottom: '8px',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontSize: '18px',
+                    color: personas[selectedPersona]?.color || '#9147FF',
+                    padding: '4px',
+                    borderRadius: '4px',
+                    opacity: isLoading ? 0.5 : 1
+                  }}
+                  title="Upload image"
+                >
+                  📷
+                </button>
+                
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  style={{ display: 'none' }}
+                />
+              </div>
+              
               <button
                 onClick={handleSendMessage}
-                disabled={!inputMessage.trim() || isLoading}
+                disabled={(!inputMessage.trim() && !uploadedImage) || isLoading}
                 style={{
                   padding: '12px 20px',
                   background: personas[selectedPersona]?.color || '#9147FF',
                   color: 'white',
                   border: 'none',
                   borderRadius: '12px',
-                  cursor: inputMessage.trim() && !isLoading ? 'pointer' : 'not-allowed',
+                  cursor: (inputMessage.trim() || uploadedImage) && !isLoading ? 'pointer' : 'not-allowed',
                   fontWeight: 'bold',
                   fontSize: '14px',
-                  opacity: inputMessage.trim() && !isLoading ? 1 : 0.5,
+                  opacity: (inputMessage.trim() || uploadedImage) && !isLoading ? 1 : 0.5,
                   transition: 'all 0.2s ease'
                 }}
               >
                 Send
               </button>
+            </div>
+            
+            {/* Privacy Disclaimer */}
+            <div style={{
+              fontSize: '10px',
+              color: '#666',
+              textAlign: 'center',
+              marginTop: '8px',
+              lineHeight: '1.3',
+              opacity: 0.8
+            }}>
+              Conversations may be reviewed by TPZ for program improvement research. To our knowledge, your data is not used to train AI models or retained by the model provider.
             </div>
           </div>
         </>

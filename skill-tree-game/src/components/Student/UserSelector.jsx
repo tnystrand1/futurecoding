@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { collection, getDocs, doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, getDocs, doc, setDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
 import { db } from '../../utils/firebase-config';
 import PixelAvatarCreator from '../Shared/PixelAvatarCreator';
+import TermsOfUse from '../Shared/TermsOfUse';
 import { useFeatureFlags } from '../../hooks/useFeatureFlags';
 
 const UserSelector = () => {
@@ -11,6 +12,8 @@ const UserSelector = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [showPinPrompt, setShowPinPrompt] = useState(false);
+  const [showTermsModal, setShowTermsModal] = useState(false);
+  const [termsStudentId, setTermsStudentId] = useState(null);
   const navigate = useNavigate();
   const flags = useFeatureFlags();
 
@@ -34,6 +37,13 @@ const UserSelector = () => {
   };
 
   const handleStudentSelect = (student) => {
+    // Check if student has agreed to terms of use
+    if (!student.termsAcceptedAt) {
+      setTermsStudentId(student.id);
+      setShowTermsModal(true);
+      return;
+    }
+    
     if (student.pin) {
       setSelectedStudent(student);
       setShowPinPrompt(true);
@@ -45,6 +55,45 @@ const UserSelector = () => {
   const enterStudent = (studentId) => {
     const dashboardType = flags.useModernDashboard ? 'modern' : 'civ';
     navigate(`/${dashboardType}/${studentId}`);
+  };
+
+  const handleTermsAccept = async () => {
+    if (!termsStudentId) return;
+    
+    try {
+      // Update student record with terms acceptance
+      await updateDoc(doc(db, 'students', termsStudentId), {
+        termsAcceptedAt: serverTimestamp(),
+        termsVersion: '1.0'
+      });
+      
+      // Reload students to get updated data
+      await loadStudents();
+      
+      // Close terms modal
+      setShowTermsModal(false);
+      
+      // Continue with student selection
+      const student = students.find(s => s.id === termsStudentId);
+      if (student) {
+        if (student.pin) {
+          setSelectedStudent(student);
+          setShowPinPrompt(true);
+        } else {
+          enterStudent(student.id);
+        }
+      }
+      
+      setTermsStudentId(null);
+    } catch (error) {
+      console.error('Error accepting terms:', error);
+      alert('Error saving terms acceptance. Please try again.');
+    }
+  };
+
+  const handleTermsDecline = () => {
+    setShowTermsModal(false);
+    setTermsStudentId(null);
   };
 
   const handlePinSubmit = (pin) => {
@@ -196,6 +245,14 @@ const UserSelector = () => {
           onSubmit={handlePinSubmit}
         />
       )}
+
+      {/* Terms of Use Modal */}
+      <TermsOfUse
+        isVisible={showTermsModal}
+        title="Terms of Use Agreement"
+        onAccept={handleTermsAccept}
+        onDecline={handleTermsDecline}
+      />
     </div>
   );
 };
@@ -462,6 +519,14 @@ const CreateStudentModal = ({ onClose, onSuccess }) => {
             </button>
           </div>
         </form>
+        
+        {/* Terms of Use Modal */}
+        <TermsOfUse
+          isVisible={showTerms}
+          title="Terms of Use - Required for Account Creation"
+          onAccept={handleTermsAccept}
+          onDecline={handleTermsDecline}
+        />
       </div>
     </div>
   );

@@ -2,9 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { SKILL_TREE } from '../../data/skillTreeData';
 import DocumentModal from '../Documentation/DocumentModal';
-import AchievementToast from '../Shared/AchievementToast';
+// import AchievementToast from '../Shared/AchievementToast'; // Unused - achievement system disabled
 import LoadingSpinner from '../Shared/LoadingSpinner';
 import CodeCriticChat from '../AI/CodeCriticChat';
+import DailyReflections from './DailyReflections';
+import PinManager from '../Shared/PinManager';
+import EnhancedMessageCenter from '../Messaging/EnhancedMessageCenter';
+import MessageNotifications from '../Messaging/MessageNotifications';
 import { useGameState } from '../../hooks/useGameState';
 import { GameLogic } from '../../utils/gameLogic';
 import '../../styles/civilization.css';
@@ -13,29 +17,34 @@ const CivDashboard = () => {
   const { studentId } = useParams();
   const [selectedSkill, setSelectedSkill] = useState(null);
   const [showDocumentModal, setShowDocumentModal] = useState(false);
-  const [showAchievement, setShowAchievement] = useState(null);
+  // const [showAchievement, setShowAchievement] = useState(null); // Unused - achievement system disabled
   const [showAIChat, setShowAIChat] = useState(false);
+  const [showPinManager, setShowPinManager] = useState(false);
+  const [pinMessage, setPinMessage] = useState('');
+  const [showMessageCenter, setShowMessageCenter] = useState(false);
+  const [showResourcesModal, setShowResourcesModal] = useState(false);
   
   const {
     studentProgress,
     loading,
     error,
-    achievements,
+    // achievements, // Unused - achievement system disabled
     unlockSkill,
     levelProgress
   } = useGameState(studentId || 'sample_student');
 
-  // Show achievements when they appear
-  useEffect(() => {
-    if (achievements.length > 0) {
-      achievements.forEach((achievement, index) => {
-        setTimeout(() => {
-          setShowAchievement(achievement);
-          setTimeout(() => setShowAchievement(null), 4000);
-        }, index * 1000);
-      });
-    }
-  }, [achievements]);
+  // Achievement system disabled - achievements array is always empty
+  // Remove this useEffect to prevent glitchy notifications
+  // useEffect(() => {
+  //   if (achievements.length > 0) {
+  //     achievements.forEach((achievement, index) => {
+  //       setTimeout(() => {
+  //         setShowAchievement(achievement);
+  //         setTimeout(() => setShowAchievement(null), 4000);
+  //       }, index * 1000);
+  //     });
+  //   }
+  // }, [achievements]);
 
   // Calculate dynamic competency scores
   const competencies = GameLogic.calculateCompetencies(studentProgress.skills || {});
@@ -66,6 +75,11 @@ const CivDashboard = () => {
     } else {
       alert(`Error submitting evidence: ${result.error}`);
     }
+  };
+
+  const handleOpenMessageFromNotification = (conversationId) => {
+    setShowMessageCenter(true);
+    // The MessageCenter will handle opening the specific conversation
   };
 
   if (loading) return <LoadingSpinner />;
@@ -279,6 +293,89 @@ const CivDashboard = () => {
             >
               🤖 Chat with CodeCritic
             </button>
+
+            {/* PIN Management Button */}
+            <button
+              onClick={() => setShowPinManager(true)}
+              style={{
+                marginTop: '10px',
+                width: '100%',
+                background: studentProgress.pin 
+                  ? 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)'
+                  : 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                padding: '10px',
+                fontSize: '13px',
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                boxShadow: '0 3px 6px rgba(0,0,0,0.2)',
+                transition: 'all 0.3s ease',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px'
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.transform = 'translateY(-1px)';
+                e.target.style.boxShadow = '0 4px 8px rgba(0,0,0,0.3)';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.transform = 'translateY(0)';
+                e.target.style.boxShadow = '0 3px 6px rgba(0,0,0,0.2)';
+              }}
+            >
+              {studentProgress.pin ? '🔐 Change PIN' : '🔒 Set PIN'}
+            </button>
+
+            {pinMessage && (
+              <div style={{
+                marginTop: '10px',
+                background: '#D1FAE5',
+                border: '1px solid #10B981',
+                borderRadius: '6px',
+                padding: '8px',
+                fontSize: '12px',
+                color: '#065F46',
+                textAlign: 'center'
+              }}>
+                {pinMessage}
+              </div>
+            )}
+
+            {/* Messaging Button */}
+            <button
+              onClick={() => setShowMessageCenter(true)}
+              style={{
+                marginTop: '10px',
+                width: '100%',
+                background: 'linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                padding: '10px',
+                fontSize: '13px',
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                boxShadow: '0 3px 6px rgba(0,0,0,0.2)',
+                transition: 'all 0.3s ease',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px'
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.transform = 'translateY(-1px)';
+                e.target.style.boxShadow = '0 4px 8px rgba(0,0,0,0.3)';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.transform = 'translateY(0)';
+                e.target.style.boxShadow = '0 3px 6px rgba(0,0,0,0.2)';
+              }}
+            >
+              💬 Messages
+            </button>
           </div>
 
           {/* Competency Profile */}
@@ -358,6 +455,82 @@ const CivDashboard = () => {
                   width: `${(parseFloat(competencies.continuousLearning) / 5.0) * 100}%`
                 }} />
               </div>
+            </div>
+          </div>
+
+          {/* Powered by Claude Card */}
+          <div style={{ 
+            background: 'linear-gradient(135deg, #F0F8FF 0%, #E6F3FF 100%)',
+            border: '3px solid #8B4513',
+            borderRadius: '12px',
+            padding: '15px',
+            boxShadow: '0 4px 8px rgba(0,0,0,0.3)',
+            textAlign: 'center'
+          }}>
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              gap: '8px',
+              color: '#1E40AF', 
+              fontSize: '14px',
+              fontWeight: 'bold'
+            }}>
+              <span style={{ fontSize: '16px' }}>🤖</span>
+              Powered by Claude 4 Sonnet
+            </div>
+            <div style={{ 
+              color: '#1E40AF', 
+              fontSize: '11px',
+              marginTop: '4px',
+              opacity: 0.8
+            }}>
+              Advanced AI for competency analysis
+            </div>
+          </div>
+
+          {/* Resources Card */}
+          <div 
+            onClick={() => setShowResourcesModal(true)}
+            style={{ 
+              background: 'linear-gradient(135deg, #E6F3FF 0%, #D1E7FF 100%)',
+              border: '3px solid #8B4513',
+              borderRadius: '12px',
+              padding: '15px',
+              boxShadow: '0 4px 8px rgba(0,0,0,0.3)',
+              textAlign: 'center',
+              cursor: 'pointer',
+              transition: 'all 0.3s ease',
+              marginTop: '10px'
+            }}
+            onMouseEnter={(e) => {
+              e.target.style.transform = 'translateY(-2px)';
+              e.target.style.boxShadow = '0 6px 12px rgba(0,0,0,0.4)';
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.transform = 'translateY(0)';
+              e.target.style.boxShadow = '0 4px 8px rgba(0,0,0,0.3)';
+            }}
+          >
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              gap: '8px',
+              color: '#1E40AF', 
+              fontSize: '14px',
+              fontWeight: 'bold'
+            }}>
+              <span style={{ fontSize: '16px' }}>📚</span>
+              Resources
+            </div>
+            <div style={{ 
+              color: '#1E40AF', 
+              fontSize: '11px',
+              marginTop: '4px',
+              opacity: 0.8
+            }}>
+              Helpful tutorials and guides
             </div>
           </div>
         </div>
@@ -473,7 +646,7 @@ const CivDashboard = () => {
                         {isSkillUnlocked(skill.id) ? 'unlocked' : 
                          isSkillPending(skill.id) ? 'pending approval' :
                          isSkillRejected(skill.id) ? 'rejected - click to see why' :
-                         isSkillAvailable(skill) ? 'developing' : 'locked'}
+                         'developing'}
                       </div>
                       <div style={{ fontSize: '10px', marginTop: '2px' }}>
                         +{skill.xpReward || 50} XP
@@ -551,7 +724,7 @@ const CivDashboard = () => {
                           ? 'linear-gradient(135deg, #4CAF50 0%, #45a049 100%)'
                           : isSkillAvailable(skill) 
                           ? 'linear-gradient(135deg, #FF9800 0%, #f57c00 100%)'
-                          : 'linear-gradient(135deg, #9E9E9E 0%, #757575 100%)',
+                          : 'linear-gradient(135deg, #2196F3 0%, #1976D2 100%)',
                         border: '2px solid #8B4513',
                         borderRadius: '8px',
                         padding: '15px',
@@ -567,7 +740,7 @@ const CivDashboard = () => {
                       onMouseEnter={(e) => e.target.style.transform = 'scale(1.05)'}
                       onMouseLeave={(e) => e.target.style.transform = 'scale(1)'}
                     >
-                      <div style={{ fontSize: '20px', marginBottom: '8px' }}>🔒</div>
+
                       <div style={{ marginBottom: '5px' }}>{skill.name}</div>
                       <div style={{ 
                         background: 'rgba(0,0,0,0.2)',
@@ -586,7 +759,7 @@ const CivDashboard = () => {
                         {isSkillUnlocked(skill.id) ? 'unlocked' : 
                          isSkillPending(skill.id) ? 'pending approval' :
                          isSkillRejected(skill.id) ? 'rejected - click to see why' :
-                         isSkillAvailable(skill) ? 'developing' : 'locked'}
+                         'developing'}
                       </div>
                       <div style={{ fontSize: '10px', marginTop: '2px' }}>
                         +{skill.xpReward || 100} XP
@@ -626,7 +799,7 @@ const CivDashboard = () => {
                       key={skill.id}
                       onClick={() => handleSkillClick(skill)}
                       style={{
-                        background: 'linear-gradient(135deg, #9E9E9E 0%, #757575 100%)',
+                        background: 'linear-gradient(135deg, #9C27B0 0%, #7B1FA2 100%)',
                         border: '2px solid #8B4513',
                         borderRadius: '8px',
                         padding: '15px',
@@ -641,7 +814,7 @@ const CivDashboard = () => {
                       onMouseEnter={(e) => e.target.style.transform = 'scale(1.05)'}
                       onMouseLeave={(e) => e.target.style.transform = 'scale(1)'}
                     >
-                      <div style={{ fontSize: '20px', marginBottom: '8px' }}>🔒</div>
+
                       <div style={{ marginBottom: '5px' }}>{skill.name}</div>
                       <div style={{ 
                         background: 'rgba(0,0,0,0.2)',
@@ -651,7 +824,7 @@ const CivDashboard = () => {
                       }}>
                         Tier 3
                       </div>
-                      <div style={{ fontSize: '10px', marginTop: '5px' }}>locked</div>
+                      <div style={{ fontSize: '10px', marginTop: '5px' }}>developing</div>
                       <div style={{ fontSize: '10px', marginTop: '2px' }}>
                         +{skill.xpReward || 150} XP
                       </div>
@@ -823,6 +996,9 @@ const CivDashboard = () => {
               </div>
             )}
           </div>
+
+          {/* Daily Reflections Section */}
+          <DailyReflections studentId={studentId || 'sample_student'} />
         </div>
       </div>
 
@@ -834,9 +1010,11 @@ const CivDashboard = () => {
         />
       )}
 
+      {/* Achievement toast removed - achievement system disabled
       {showAchievement && (
         <AchievementToast achievement={showAchievement} />
       )}
+      */}
 
       {showAIChat && (
         <CodeCriticChat
@@ -844,6 +1022,176 @@ const CivDashboard = () => {
           studentData={studentProgress}
           onClose={() => setShowAIChat(false)}
         />
+      )}
+
+      {showPinManager && (
+        <PinManager
+          student={{ id: studentId, pin: studentProgress.pin, name: studentProgress.name }}
+          onClose={() => setShowPinManager(false)}
+          onSuccess={(message) => {
+            setShowPinManager(false);
+            setPinMessage(message);
+            // Clear success message after 3 seconds
+            setTimeout(() => setPinMessage(''), 3000);
+            // Optionally reload student data to get updated PIN
+            window.location.reload();
+          }}
+        />
+      )}
+
+      {showMessageCenter && (
+        <EnhancedMessageCenter
+          studentId={studentId || 'sample_student'}
+          onClose={() => setShowMessageCenter(false)}
+        />
+      )}
+
+      {/* Message Notifications - show even when MessageCenter is closed */}
+      {!showMessageCenter && (
+        <MessageNotifications
+          studentId={studentId || 'sample_student'}
+          onOpenMessage={handleOpenMessageFromNotification}
+        />
+      )}
+
+      {/* Resources Modal */}
+      {showResourcesModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.8)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            background: 'white',
+            borderRadius: '12px',
+            padding: '20px',
+            maxWidth: '90vw',
+            maxHeight: '90vh',
+            width: '800px',
+            boxShadow: '0 10px 25px rgba(0, 0, 0, 0.3)',
+            position: 'relative'
+          }}>
+            {/* Close Button */}
+            <button
+              onClick={() => setShowResourcesModal(false)}
+              style={{
+                position: 'absolute',
+                top: '15px',
+                right: '15px',
+                background: '#ff4757',
+                color: 'white',
+                border: 'none',
+                borderRadius: '50%',
+                width: '30px',
+                height: '30px',
+                cursor: 'pointer',
+                fontSize: '16px',
+                fontWeight: 'bold',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 1001
+              }}
+              onMouseEnter={(e) => e.target.style.background = '#ff3742'}
+              onMouseLeave={(e) => e.target.style.background = '#ff4757'}
+            >
+              ×
+            </button>
+
+            {/* Modal Header */}
+            <div style={{
+              textAlign: 'center',
+              marginBottom: '20px',
+              paddingRight: '40px'
+            }}>
+              <h2 style={{
+                color: '#8B4513',
+                margin: '0 0 10px 0',
+                fontSize: '24px',
+                fontWeight: 'bold'
+              }}>
+                📚 Resources
+              </h2>
+              <p style={{
+                color: '#666',
+                margin: 0,
+                fontSize: '14px'
+              }}>
+                Helpful tutorials and guides for your coding journey
+              </p>
+            </div>
+
+            {/* Resources List */}
+            <div style={{
+              display: 'grid',
+              gap: '15px'
+            }}>
+              {/* GitHub Codespaces Setup Video */}
+              <div style={{
+                border: '2px solid #8B4513',
+                borderRadius: '8px',
+                padding: '15px',
+                background: '#F4E4BC'
+              }}>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  marginBottom: '10px'
+                }}>
+                  <span style={{ fontSize: '20px' }}>🎥</span>
+                  <h3 style={{
+                    margin: 0,
+                    color: '#8B4513',
+                    fontSize: '16px'
+                  }}>
+                    GitHub Codespaces Setup
+                  </h3>
+                </div>
+                <p style={{
+                  margin: '0 0 15px 0',
+                  color: '#666',
+                  fontSize: '14px',
+                  lineHeight: '1.4'
+                }}>
+                  Learn how to set up and use GitHub Codespaces for your coding projects.
+                </p>
+                
+                {/* Video Embed */}
+                <div style={{
+                  position: 'relative',
+                  paddingBottom: '56.25%',
+                  height: 0,
+                  borderRadius: '8px',
+                  overflow: 'hidden',
+                  boxShadow: '0 4px 8px rgba(0,0,0,0.2)'
+                }}>
+                  <iframe 
+                    src="https://www.loom.com/embed/b5a97651b6e246a28b14634620114b0b?sid=cc670de7-0beb-4700-bd29-0f6ee8a35a15" 
+                    frameBorder="0" 
+                    webkitallowfullscreen 
+                    mozallowfullscreen 
+                    allowFullScreen 
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      height: '100%'
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
