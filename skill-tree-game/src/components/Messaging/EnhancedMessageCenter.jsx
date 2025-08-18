@@ -121,7 +121,15 @@ const EnhancedMessageCenter = ({ studentId, onClose }) => {
       const safeConversation = {
         id: conversation.id,
         participants: conversation.participants || [studentId, otherStudentId],
-        participantInfo: [otherStudentInfo],
+        participantInfo: otherStudentInfo ? [{
+          id: otherStudentInfo.id || otherStudentId,
+          name: otherStudentInfo.name || otherStudentId.replace(/_/g, ' '),
+          avatar: otherStudentInfo.avatar || { emoji: '👤', color1: '#FF8C42' }
+        }] : [{
+          id: otherStudentId,
+          name: otherStudentId.replace(/_/g, ' '),
+          avatar: { emoji: '👤', color1: '#FF8C42' }
+        }],
         lastMessage: conversation.lastMessage || { text: '', senderId: '', timestamp: new Date() },
         messageCount: conversation.messageCount || 0,
         createdAt: conversation.createdAt || new Date()

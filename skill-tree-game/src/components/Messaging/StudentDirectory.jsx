@@ -489,7 +489,7 @@ const StudentDirectory = ({ currentStudentId, onStartConversation, onBack }) => 
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        onStartConversation(student.id);
+                        onStartConversation(student.id, student);
                       }}
                       style={{
                         background: 'linear-gradient(135deg, #8B4513 0%, #A0522D 100%)',
