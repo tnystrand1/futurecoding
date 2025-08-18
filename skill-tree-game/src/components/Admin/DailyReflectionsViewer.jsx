@@ -326,7 +326,11 @@ const DailyReflectionsViewer = () => {
                         <>
                           <strong>{firstQuestion.label}</strong>
                           <div style={{ marginTop: '4px' }}>
-                            {content ? content.substring(0, 100) + '...' : 'No response'}
+                            {content ? (
+                              firstQuestion.type === 'image' ? 
+                                '📷 Image uploaded' : 
+                                content.substring(0, 100) + (content.length > 100 ? '...' : '')
+                            ) : 'No response'}
                           </div>
                         </>
                       );
@@ -394,7 +398,33 @@ const DailyReflectionsViewer = () => {
                       lineHeight: '1.6',
                       color: '#374151'
                     }}>
-                      {selectedReflection[question.key] || 'No response provided'}
+                      {selectedReflection[question.key] ? (
+                        question.type === 'image' ? (
+                          <div>
+                            <img 
+                              src={selectedReflection[question.key]} 
+                              alt={question.label}
+                              style={{
+                                maxWidth: '100%',
+                                maxHeight: '400px',
+                                borderRadius: '6px',
+                                border: '1px solid #e5e7eb'
+                              }}
+                              onError={(e) => {
+                                e.target.style.display = 'none';
+                                e.target.nextSibling.style.display = 'block';
+                              }}
+                            />
+                            <div style={{ display: 'none', color: '#ef4444', fontStyle: 'italic' }}>
+                              ❌ Image failed to load: {selectedReflection[question.key]}
+                            </div>
+                          </div>
+                        ) : (
+                          selectedReflection[question.key]
+                        )
+                      ) : (
+                        'No response provided'
+                      )}
                     </div>
                   </div>
                 ))}
