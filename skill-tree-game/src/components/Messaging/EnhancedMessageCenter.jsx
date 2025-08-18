@@ -38,7 +38,19 @@ const EnhancedMessageCenter = ({ studentId, onClose }) => {
           // For group conversations, get info for all participants
           const participantInfos = conv.participants
             .filter(p => p !== studentId)
-            .map(p => studentDirectory.find(s => s.id === p))
+            .map(p => {
+              const student = studentDirectory.find(s => s.id === p);
+              if (!student) return null;
+              // Safely extract avatar properties to avoid React serialization errors
+              return {
+                id: student.id,
+                name: student.name,
+                avatar: {
+                  emoji: typeof student.avatar === 'object' ? student.avatar?.emoji : student.avatar,
+                  color1: typeof student.avatar === 'object' ? student.avatar?.color1 : '#FF8C42'
+                }
+              };
+            })
             .filter(Boolean);
           
           return {
@@ -48,12 +60,29 @@ const EnhancedMessageCenter = ({ studentId, onClose }) => {
         } else {
           // For direct conversations, get the other participant
           const otherParticipantId = conv.participants.find(p => p !== studentId);
-          const participantInfo = studentDirectory.find(s => s.id === otherParticipantId);
+          const student = studentDirectory.find(s => s.id === otherParticipantId);
           
-          return {
-            ...conv,
-            participantInfo: participantInfo ? [participantInfo] : []
-          };
+          if (student) {
+            // Safely extract avatar properties to avoid React serialization errors
+            const safeParticipantInfo = {
+              id: student.id,
+              name: student.name,
+              avatar: {
+                emoji: typeof student.avatar === 'object' ? student.avatar?.emoji : student.avatar,
+                color1: typeof student.avatar === 'object' ? student.avatar?.color1 : '#FF8C42'
+              }
+            };
+            
+            return {
+              ...conv,
+              participantInfo: [safeParticipantInfo]
+            };
+          } else {
+            return {
+              ...conv,
+              participantInfo: []
+            };
+          }
         }
       });
       
