@@ -3,6 +3,7 @@ import {
   doc, 
   addDoc, 
   updateDoc, 
+  setDoc,
   getDocs, 
   getDoc, 
   query, 
@@ -76,6 +77,8 @@ class EnhancedMessagingService {
         timestamp: serverTimestamp(),
         messageType,
         isRead: false,
+        readAt: null,
+        deliveredAt: serverTimestamp(), // Message is delivered when created
         competencyTags: this.analyzeMessageForCompetencyTags(text, processedAttachments)
       };
 
@@ -244,7 +247,10 @@ class EnhancedMessagingService {
           senderId: '',
           timestamp: serverTimestamp()
         },
-        messageCount: 0
+        messageCount: 0,
+        archived: {}, // Object to track archive status per participant: { userId: true/false }
+        type: 'direct', // 'direct' or 'group'
+        isGroup: false
       };
 
       const conversationRef = await addDoc(this.conversationsRef, conversationData);
@@ -285,8 +291,8 @@ class EnhancedMessagingService {
     }
   }
 
-  // Get student conversations with fallback logic
-  async getStudentConversations(studentId) {
+  // Get student conversations with fallback logic (excludes archived by default)
+  async getStudentConversations(studentId, includeArchived = false) {
     try {
       // Try indexed query first
       const q = query(
@@ -296,16 +302,25 @@ class EnhancedMessagingService {
       );
       
       const snapshot = await getDocs(q);
-      return snapshot.docs.map(doc => ({
+      let conversations = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       }));
+
+      // Filter out archived conversations unless specifically requested
+      if (!includeArchived) {
+        conversations = conversations.filter(conv => 
+          !conv.archived || conv.archived[studentId] !== true
+        );
+      }
+
+      return conversations;
     } catch (error) {
       console.warn('Indexed query failed, using fallback:', error);
       
       // Fallback: get all conversations and filter client-side
       const allConversationsSnapshot = await getDocs(this.conversationsRef);
-      const conversations = allConversationsSnapshot.docs
+      let conversations = allConversationsSnapshot.docs
         .map(doc => ({ id: doc.id, ...doc.data() }))
         .filter(conv => conv.participants.includes(studentId))
         .sort((a, b) => {
@@ -313,12 +328,19 @@ class EnhancedMessagingService {
           const bTime = b.lastMessage?.timestamp?.toDate?.() || new Date(0);
           return bTime - aTime;
         });
+
+      // Filter out archived conversations unless specifically requested
+      if (!includeArchived) {
+        conversations = conversations.filter(conv => 
+          !conv.archived || conv.archived[studentId] !== true
+        );
+      }
       
       return conversations;
     }
   }
 
-  // Mark messages as read
+  // Mark messages as read with timestamp
   async markMessagesAsRead(conversationId, userId) {
     try {
       const q = query(
@@ -329,8 +351,13 @@ class EnhancedMessagingService {
       );
       
       const snapshot = await getDocs(q);
+      const readTimestamp = serverTimestamp();
+      
       const updatePromises = snapshot.docs.map(doc => 
-        updateDoc(doc.ref, { isRead: true })
+        updateDoc(doc.ref, { 
+          isRead: true,
+          readAt: readTimestamp
+        })
       );
       
       await Promise.all(updatePromises);
@@ -338,6 +365,444 @@ class EnhancedMessagingService {
     } catch (error) {
       console.error('Error marking messages as read:', error);
       return 0;
+    }
+  }
+
+  // Mark a specific message as read
+  async markMessageAsRead(messageId, userId) {
+    try {
+      const messageRef = doc(this.messagesRef, messageId);
+      const messageDoc = await getDoc(messageRef);
+      
+      if (messageDoc.exists()) {
+        const messageData = messageDoc.data();
+        
+        // Only mark as read if the user is the receiver and it's not already read
+        if (messageData.receiverId === userId && !messageData.isRead) {
+          await updateDoc(messageRef, {
+            isRead: true,
+            readAt: serverTimestamp()
+          });
+          return true;
+        }
+      }
+      return false;
+    } catch (error) {
+      console.error('Error marking message as read:', error);
+      return false;
+    }
+  }
+
+  // Get read receipt status for a message
+  async getMessageReadStatus(messageId) {
+    try {
+      const messageRef = doc(this.messagesRef, messageId);
+      const messageDoc = await getDoc(messageRef);
+      
+      if (messageDoc.exists()) {
+        const data = messageDoc.data();
+        return {
+          delivered: !!data.deliveredAt,
+          deliveredAt: data.deliveredAt,
+          read: !!data.isRead,
+          readAt: data.readAt
+        };
+      }
+      return null;
+    } catch (error) {
+      console.error('Error getting message read status:', error);
+      return null;
+    }
+  }
+
+  // Get conversation read status summary
+  async getConversationReadStatus(conversationId, userId) {
+    try {
+      // Try the indexed query first
+      const q = query(
+        this.messagesRef,
+        where('conversationId', '==', conversationId),
+        where('senderId', '==', userId),
+        orderBy('timestamp', 'desc'),
+        limit(20) // Check last 20 messages for performance
+      );
+      
+      const snapshot = await getDocs(q);
+      const messages = snapshot.docs.map(doc => doc.data());
+      
+      const totalSent = messages.length;
+      const readMessages = messages.filter(msg => msg.isRead).length;
+      const deliveredMessages = messages.filter(msg => msg.deliveredAt).length;
+      const lastReadMessage = messages.find(msg => msg.isRead);
+      
+      return {
+        totalSent,
+        delivered: deliveredMessages,
+        read: readMessages,
+        lastReadAt: lastReadMessage?.readAt || null,
+        readPercentage: totalSent > 0 ? Math.round((readMessages / totalSent) * 100) : 0
+      };
+    } catch (error) {
+      console.error('Error getting conversation read status:', error);
+      
+      // Fallback: Just return basic status without detailed query
+      try {
+        const fallbackQ = query(
+          this.messagesRef,
+          where('conversationId', '==', conversationId),
+          limit(20)
+        );
+        
+        const fallbackSnapshot = await getDocs(fallbackQ);
+        const userMessages = fallbackSnapshot.docs
+          .map(doc => doc.data())
+          .filter(msg => msg.senderId === userId);
+        
+        const totalSent = userMessages.length;
+        const readMessages = userMessages.filter(msg => msg.isRead).length;
+        
+        return {
+          totalSent,
+          delivered: totalSent, // Assume delivered if sent
+          read: readMessages,
+          lastReadAt: null,
+          readPercentage: totalSent > 0 ? Math.round((readMessages / totalSent) * 100) : 0
+        };
+      } catch (fallbackError) {
+        console.error('Fallback query also failed:', fallbackError);
+        // Return default status
+        return {
+          totalSent: 0,
+          delivered: 0,
+          read: 0,
+          lastReadAt: null,
+          readPercentage: 0
+        };
+      }
+    }
+  }
+
+  // Archive a conversation for a specific user
+  async archiveConversation(conversationId, userId) {
+    try {
+      const conversationRef = doc(this.conversationsRef, conversationId);
+      const conversationDoc = await getDoc(conversationRef);
+      
+      if (conversationDoc.exists()) {
+        const currentData = conversationDoc.data();
+        const updatedArchived = {
+          ...currentData.archived,
+          [userId]: true
+        };
+        
+        await updateDoc(conversationRef, {
+          archived: updatedArchived
+        });
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Error archiving conversation:', error);
+      return false;
+    }
+  }
+
+  // Unarchive a conversation for a specific user
+  async unarchiveConversation(conversationId, userId) {
+    try {
+      const conversationRef = doc(this.conversationsRef, conversationId);
+      const conversationDoc = await getDoc(conversationRef);
+      
+      if (conversationDoc.exists()) {
+        const currentData = conversationDoc.data();
+        const updatedArchived = {
+          ...currentData.archived,
+          [userId]: false
+        };
+        
+        await updateDoc(conversationRef, {
+          archived: updatedArchived
+        });
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Error unarchiving conversation:', error);
+      return false;
+    }
+  }
+
+  // Get archived conversations for a user
+  async getArchivedConversations(studentId) {
+    try {
+      const q = query(
+        this.conversationsRef,
+        where('participants', 'array-contains', studentId)
+      );
+      
+      const snapshot = await getDocs(q);
+      const archivedConversations = snapshot.docs
+        .map(doc => ({ id: doc.id, ...doc.data() }))
+        .filter(conv => conv.archived && conv.archived[studentId] === true)
+        .sort((a, b) => {
+          const aTime = a.lastMessage?.timestamp?.toDate?.() || new Date(0);
+          const bTime = b.lastMessage?.timestamp?.toDate?.() || new Date(0);
+          return bTime - aTime;
+        });
+      
+      return archivedConversations;
+    } catch (error) {
+      console.error('Error getting archived conversations:', error);
+      return [];
+    }
+  }
+
+  // Create a group conversation
+  async createGroupConversation(creatorId, participantIds, groupName, groupDescription = '') {
+    try {
+      // Ensure creator is included in participants
+      const allParticipants = [...new Set([creatorId, ...participantIds])];
+      
+      if (allParticipants.length < 3) {
+        throw new Error('Group conversations must have at least 3 participants');
+      }
+
+      const groupData = {
+        participants: allParticipants,
+        createdAt: serverTimestamp(),
+        lastMessage: {
+          text: '',
+          senderId: '',
+          timestamp: serverTimestamp()
+        },
+        messageCount: 0,
+        archived: {},
+        type: 'group',
+        isGroup: true,
+        groupName: groupName || `Group Chat`,
+        groupDescription,
+        createdBy: creatorId,
+        admins: [creatorId], // Creator starts as admin
+        groupSettings: {
+          allowParticipantInvites: true,
+          allowNameChange: true,
+          allowDescriptionChange: true
+        }
+      };
+
+      const conversationRef = await addDoc(this.conversationsRef, groupData);
+      
+      // Send a system message about group creation
+      await this.sendSystemMessage(conversationRef.id, `${creatorId} created the group "${groupName}"`);
+      
+      return {
+        id: conversationRef.id,
+        ...groupData
+      };
+    } catch (error) {
+      console.error('Error creating group conversation:', error);
+      throw error;
+    }
+  }
+
+  // Add participants to a group
+  async addParticipantsToGroup(conversationId, participantIds, addedBy) {
+    try {
+      const conversationRef = doc(this.conversationsRef, conversationId);
+      const conversationDoc = await getDoc(conversationRef);
+      
+      if (!conversationDoc.exists()) {
+        throw new Error('Group conversation not found');
+      }
+
+      const conversationData = conversationDoc.data();
+      
+      if (!conversationData.isGroup) {
+        throw new Error('Cannot add participants to a direct conversation');
+      }
+
+      // Check if user has permission to add participants
+      if (!conversationData.admins.includes(addedBy) && !conversationData.groupSettings.allowParticipantInvites) {
+        throw new Error('You do not have permission to add participants');
+      }
+
+      // Filter out participants that are already in the group
+      const newParticipants = participantIds.filter(id => !conversationData.participants.includes(id));
+      
+      if (newParticipants.length === 0) {
+        return { success: true, added: 0 };
+      }
+
+      const updatedParticipants = [...conversationData.participants, ...newParticipants];
+      
+      await updateDoc(conversationRef, {
+        participants: updatedParticipants
+      });
+
+      // Send system message about new participants
+      for (const participantId of newParticipants) {
+        await this.sendSystemMessage(conversationId, `${addedBy} added ${participantId} to the group`);
+      }
+
+      return { success: true, added: newParticipants.length };
+    } catch (error) {
+      console.error('Error adding participants to group:', error);
+      throw error;
+    }
+  }
+
+  // Remove participant from group
+  async removeParticipantFromGroup(conversationId, participantId, removedBy) {
+    try {
+      const conversationRef = doc(this.conversationsRef, conversationId);
+      const conversationDoc = await getDoc(conversationRef);
+      
+      if (!conversationDoc.exists()) {
+        throw new Error('Group conversation not found');
+      }
+
+      const conversationData = conversationDoc.data();
+      
+      if (!conversationData.isGroup) {
+        throw new Error('Cannot remove participants from a direct conversation');
+      }
+
+      // Check permissions (admins can remove anyone, users can remove themselves)
+      if (!conversationData.admins.includes(removedBy) && removedBy !== participantId) {
+        throw new Error('You do not have permission to remove this participant');
+      }
+
+      const updatedParticipants = conversationData.participants.filter(id => id !== participantId);
+      const updatedAdmins = conversationData.admins.filter(id => id !== participantId);
+      
+      // If removing the last admin, promote someone else
+      if (updatedAdmins.length === 0 && updatedParticipants.length > 0) {
+        updatedAdmins.push(updatedParticipants[0]);
+      }
+
+      await updateDoc(conversationRef, {
+        participants: updatedParticipants,
+        admins: updatedAdmins
+      });
+
+      // Send system message
+      const action = removedBy === participantId ? 'left' : 'was removed from';
+      await this.sendSystemMessage(conversationId, `${participantId} ${action} the group`);
+
+      return { success: true };
+    } catch (error) {
+      console.error('Error removing participant from group:', error);
+      throw error;
+    }
+  }
+
+  // Update group settings
+  async updateGroupSettings(conversationId, updates, updatedBy) {
+    try {
+      const conversationRef = doc(this.conversationsRef, conversationId);
+      const conversationDoc = await getDoc(conversationRef);
+      
+      if (!conversationDoc.exists()) {
+        throw new Error('Group conversation not found');
+      }
+
+      const conversationData = conversationDoc.data();
+      
+      if (!conversationData.isGroup) {
+        throw new Error('Cannot update settings for a direct conversation');
+      }
+
+      // Check admin permissions for sensitive operations
+      const isAdmin = conversationData.admins.includes(updatedBy);
+      
+      if ((updates.groupName && !conversationData.groupSettings.allowNameChange && !isAdmin) ||
+          (updates.groupDescription && !conversationData.groupSettings.allowDescriptionChange && !isAdmin)) {
+        throw new Error('You do not have permission to update these settings');
+      }
+
+      const updateData = {};
+      
+      if (updates.groupName !== undefined) {
+        updateData.groupName = updates.groupName;
+      }
+      
+      if (updates.groupDescription !== undefined) {
+        updateData.groupDescription = updates.groupDescription;
+      }
+      
+      if (updates.groupSettings && isAdmin) {
+        updateData.groupSettings = {
+          ...conversationData.groupSettings,
+          ...updates.groupSettings
+        };
+      }
+
+      await updateDoc(conversationRef, updateData);
+
+      // Send system message for name changes
+      if (updates.groupName) {
+        await this.sendSystemMessage(conversationId, `${updatedBy} changed the group name to "${updates.groupName}"`);
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error('Error updating group settings:', error);
+      throw error;
+    }
+  }
+
+  // Send system message
+  async sendSystemMessage(conversationId, text) {
+    try {
+      const messageData = {
+        conversationId,
+        senderId: 'system',
+        receiverId: '', // System messages don't have specific receivers
+        text,
+        timestamp: serverTimestamp(),
+        messageType: 'system',
+        isRead: false,
+        readAt: null,
+        deliveredAt: serverTimestamp(),
+        competencyTags: []
+      };
+
+      await addDoc(this.messagesRef, messageData);
+    } catch (error) {
+      console.error('Error sending system message:', error);
+    }
+  }
+
+  // Get group conversations for a user
+  async getGroupConversations(studentId) {
+    try {
+      const q = query(
+        this.conversationsRef,
+        where('participants', 'array-contains', studentId),
+        where('isGroup', '==', true),
+        orderBy('lastMessage.timestamp', 'desc')
+      );
+      
+      const snapshot = await getDocs(q);
+      return snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+    } catch (error) {
+      console.warn('Indexed group query failed, using fallback:', error);
+      
+      // Fallback: get all conversations and filter client-side
+      const allConversationsSnapshot = await getDocs(this.conversationsRef);
+      const groupConversations = allConversationsSnapshot.docs
+        .map(doc => ({ id: doc.id, ...doc.data() }))
+        .filter(conv => conv.participants.includes(studentId) && conv.isGroup)
+        .sort((a, b) => {
+          const aTime = a.lastMessage?.timestamp?.toDate?.() || new Date(0);
+          const bTime = b.lastMessage?.timestamp?.toDate?.() || new Date(0);
+          return bTime - aTime;
+        });
+      
+      return groupConversations;
     }
   }
 
@@ -489,10 +954,41 @@ class EnhancedMessagingService {
           createdAt: serverTimestamp()
         };
         
-        await updateDoc(statsDocRef, newStats);
+        await setDoc(statsDocRef, newStats);
       }
     } catch (error) {
       console.error('Error updating messaging stats:', error);
+    }
+  }
+
+  // Get student directory for group creation
+  async getStudentDirectory(excludeStudentId = null) {
+    try {
+      const snapshot = await getDocs(this.studentsRef);
+      let students = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+
+      // Filter out the current student
+      if (excludeStudentId) {
+        students = students.filter(student => student.id !== excludeStudentId);
+      }
+
+      // If no students found, add sample students for testing
+      if (students.length === 0) {
+        students = [
+          { id: 'sample_student_1', name: 'Alex Chen', avatar: '👨‍💻', online: true },
+          { id: 'sample_student_2', name: 'Maya Rodriguez', avatar: '👩‍🎨', online: false },
+          { id: 'sample_student_3', name: 'Jordan Kim', avatar: '👨‍🔬', online: true },
+          { id: 'sample_student_4', name: 'Sam Taylor', avatar: '👩‍💻', online: true }
+        ].filter(student => student.id !== excludeStudentId);
+      }
+
+      return students;
+    } catch (error) {
+      console.error('❌ Error getting student directory:', error);
+      return [];
     }
   }
 }

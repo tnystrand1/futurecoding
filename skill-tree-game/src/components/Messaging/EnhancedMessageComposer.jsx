@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import { detectUrls } from '../../utils/urlUtils';
 
 const EnhancedMessageComposer = ({ onSendMessage }) => {
   const [message, setMessage] = useState('');
@@ -7,6 +8,8 @@ const EnhancedMessageComposer = ({ onSendMessage }) => {
   const [uploadedCodeFiles, setUploadedCodeFiles] = useState([]);
   const [isUploading, setIsUploading] = useState(false);
   const [showCodeTips, setShowCodeTips] = useState(false);
+  const [showUrlTips, setShowUrlTips] = useState(false);
+  const [detectedUrls, setDetectedUrls] = useState([]);
   const textareaRef = useRef(null);
   const imageFileInputRef = useRef(null);
   const codeFileInputRef = useRef(null);
@@ -33,6 +36,8 @@ const EnhancedMessageComposer = ({ onSendMessage }) => {
       setUploadedImages([]);
       setUploadedCodeFiles([]);
       setShowCodeTips(false);
+      setShowUrlTips(false);
+      setDetectedUrls([]);
       if (textareaRef.current) {
         textareaRef.current.style.height = 'auto';
       }
@@ -80,6 +85,11 @@ const EnhancedMessageComposer = ({ onSendMessage }) => {
     
     const hasBackticks = newMessage.includes('```');
     setShowCodeTips(hasCodeKeywords && !hasBackticks && newMessage.length > 20);
+    
+    // URL detection and tips
+    const urls = detectUrls(newMessage);
+    setDetectedUrls(urls);
+    setShowUrlTips(urls.length > 0 && !urls.some(url => !url.isSafe));
     
     // Auto-resize textarea
     const textarea = e.target;
@@ -341,6 +351,48 @@ const EnhancedMessageComposer = ({ onSendMessage }) => {
           >
             Add Code Block
           </button>
+        </div>
+      )}
+
+      {/* URL Detection Tip */}
+      {showUrlTips && detectedUrls.length > 0 && (
+        <div style={{
+          marginBottom: '12px',
+          padding: '8px 12px',
+          background: 'rgba(52, 152, 219, 0.1)',
+          border: '1px solid rgba(52, 152, 219, 0.3)',
+          borderRadius: '8px',
+          fontSize: '12px',
+          color: '#3498db'
+        }}>
+          🔗 <strong>Found {detectedUrls.length} link{detectedUrls.length > 1 ? 's' : ''}!</strong> 
+          Consider adding context about what you're sharing.
+          <div style={{ marginTop: '6px', display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+            {detectedUrls.slice(0, 3).map((urlInfo, index) => (
+              <span key={index} style={{
+                background: 'rgba(52, 152, 219, 0.15)',
+                padding: '2px 6px',
+                borderRadius: '4px',
+                fontSize: '10px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '3px'
+              }}>
+                <span>{urlInfo.icon}</span>
+                <span>{urlInfo.domain}</span>
+                {!urlInfo.isSafe && <span style={{ color: '#e74c3c' }}>⚠️</span>}
+              </span>
+            ))}
+            {detectedUrls.length > 3 && (
+              <span style={{
+                fontSize: '10px',
+                opacity: 0.7,
+                padding: '2px 4px'
+              }}>
+                +{detectedUrls.length - 3} more
+              </span>
+            )}
+          </div>
         </div>
       )}
 

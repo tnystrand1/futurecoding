@@ -9,8 +9,12 @@ import DailyReflections from './DailyReflections';
 import PinManager from '../Shared/PinManager';
 import EnhancedMessageCenter from '../Messaging/EnhancedMessageCenter';
 import MessageNotifications from '../Messaging/MessageNotifications';
+import XPLeaderboard from '../Shared/XPLeaderboard';
+import GalleryGrid from '../Gallery/GalleryGrid';
 import { useGameState } from '../../hooks/useGameState';
 import { GameLogic } from '../../utils/gameLogic';
+import { collection, getDocs } from 'firebase/firestore';
+import { db } from '../../utils/firebase-config';
 import '../../styles/civilization.css';
 
 const CivDashboard = () => {
@@ -23,6 +27,7 @@ const CivDashboard = () => {
   const [pinMessage, setPinMessage] = useState('');
   const [showMessageCenter, setShowMessageCenter] = useState(false);
   const [showResourcesModal, setShowResourcesModal] = useState(false);
+  const [showGallery, setShowGallery] = useState(false);
   
   const {
     studentProgress,
@@ -81,6 +86,161 @@ const CivDashboard = () => {
     setShowMessageCenter(true);
     // The MessageCenter will handle opening the specific conversation
   };
+
+  // Get student's team based on the client-student team structure
+  const getStudentTeam = (studentId) => {
+    const teamMappings = {
+      // Jeremy Client Teams (Jeremy is the client, not team member)
+      'charles': 'jeremy_client_team_1',
+      'julius': 'jeremy_client_team_1', 
+      'robert': 'jeremy_client_team_1',
+      
+      'matthew': 'jeremy_client_team_2',
+      'ocasio': 'jeremy_client_team_2', // Miguel O is listed as "ocasio" in Firestore
+      'taii': 'jeremy_client_team_2', // Tai is listed as "Taii" in Firestore
+      
+      // Fiona Client Teams (Fiona is the client, not team member)
+      'aaron': 'fiona_client_team_1',
+      'luis': 'fiona_client_team_1',
+      'sapphire': 'fiona_client_team_1',
+      
+      'anthony_': 'fiona_client_team_2', // Anthony is listed as "anthony_" in Firestore
+      'jephte': 'fiona_client_team_2',
+      'keyler': 'fiona_client_team_2',
+      
+      // Jonathan Client Teams (Jonathan is the client, not team member)
+      'miguel_t_': 'jonathan_client_team_1', // Miguel T is listed as "miguel_t_" in Firestore
+      'mikayla': 'jonathan_client_team_1',
+      'seyvon': 'jonathan_client_team_1',
+      'yousha': 'jonathan_client_team_1', // Adding Yousha to Miguel T's team
+      
+      'aiden': 'jonathan_client_team_2',
+      'fradauryn': 'jonathan_client_team_2',
+      'romain_j': 'jonathan_client_team_2' // Romain is listed as "romain_j" in Firestore
+    };
+    
+    const normalizedId = studentId?.toLowerCase().replace(/[^a-z_]/g, '');
+    return teamMappings[normalizedId] || 'unassigned_team';
+  };
+
+  // Debug function to check all student team assignments
+  const debugStudentTeams = async () => {
+    try {
+      console.log('🔍 Fetching all students from Firestore...\n');
+      
+      const studentsSnapshot = await getDocs(collection(db, 'students'));
+      
+      if (studentsSnapshot.empty) {
+        console.log('❌ No students found in Firestore students collection');
+        return;
+      }
+
+      const students = studentsSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+
+      console.log(`📊 Found ${students.length} students in Firestore\n`);
+      console.log('='.repeat(80));
+      console.log('STUDENT TEAM ASSIGNMENTS');
+      console.log('='.repeat(80));
+
+      // Group students by team assignment
+      const teamGroups = {};
+      const unassignedStudents = [];
+
+      students.forEach(student => {
+        const studentId = student.id;
+        const normalizedId = studentId?.toLowerCase().replace(/[^a-z_]/g, '');
+        const teamId = getStudentTeam(studentId);
+        
+        const getTeamDisplayName = (teamId) => {
+          const teamNames = {
+            'jeremy_client_team_1': 'Charles, Julius, Robert (Jeremy Client)',
+            'jeremy_client_team_2': 'Matthew, Ocasio, Taii (Jeremy Client)',
+            'fiona_client_team_1': 'Aaron, Luis, Sapphire (Fiona Client)',
+            'fiona_client_team_2': 'Anthony, Jephte, Keyler (Fiona Client)',
+            'jonathan_client_team_1': 'Miguel T, Mikayla, Seyvon, Yousha (Jonathan Client)',
+            'jonathan_client_team_2': 'Aiden, Fradauryn, Romain (Jonathan Client)',
+            'unassigned_team': 'Unassigned Team'
+          };
+          return teamNames[teamId] || teamId?.replace(/_/g, ' ') || 'Unknown Team';
+        };
+
+        const teamName = getTeamDisplayName(teamId);
+
+        const studentInfo = {
+          originalId: studentId,
+          normalizedId: normalizedId,
+          name: student.name || 'No name provided',
+          teamId: teamId,
+          teamName: teamName
+        };
+
+        if (teamId === 'unassigned_team') {
+          unassignedStudents.push(studentInfo);
+        } else {
+          if (!teamGroups[teamId]) {
+            teamGroups[teamId] = {
+              teamName: teamName,
+              students: []
+            };
+          }
+          teamGroups[teamId].students.push(studentInfo);
+        }
+      });
+
+      // Display assigned teams
+      Object.keys(teamGroups).forEach(teamId => {
+        const team = teamGroups[teamId];
+        console.log(`\n🏆 ${team.teamName}`);
+        console.log('-'.repeat(60));
+        
+        team.students.forEach(student => {
+          console.log(`  ✅ ${student.originalId} (${student.name})`);
+          console.log(`      Normalized: "${student.normalizedId}"`);
+        });
+      });
+
+      // Display unassigned students
+      if (unassignedStudents.length > 0) {
+        console.log(`\n⚠️  UNASSIGNED STUDENTS (${unassignedStudents.length})`);
+        console.log('-'.repeat(60));
+        
+        unassignedStudents.forEach(student => {
+          console.log(`  ❌ ${student.originalId} (${student.name})`);
+          console.log(`      Normalized: "${student.normalizedId}"`);
+          console.log(`      Suggestion: Check if this matches any team member name`);
+        });
+      }
+
+      console.log('\n' + '='.repeat(80));
+      console.log('SUMMARY');
+      console.log('='.repeat(80));
+      console.log(`📈 Total Students: ${students.length}`);
+      console.log(`✅ Assigned: ${students.length - unassignedStudents.length}`);
+      console.log(`❌ Unassigned: ${unassignedStudents.length}`);
+
+      if (unassignedStudents.length > 0) {
+        console.log('\n💡 RECOMMENDATIONS:');
+        console.log('1. Check if unassigned student IDs match actual student names');
+        console.log('2. Update team mapping in CivDashboard.jsx if needed');
+        console.log('3. Consider adding alternate ID formats (e.g. with/without middle initials)');
+      }
+
+      return { students, teamGroups, unassignedStudents };
+
+    } catch (error) {
+      console.error('❌ Error fetching students:', error);
+      return null;
+    }
+  };
+
+  // Make debug function available globally
+  React.useEffect(() => {
+    window.debugStudentTeams = debugStudentTeams;
+    console.log('🛠️ Debug function available: run debugStudentTeams() in console');
+  }, []);
 
   if (loading) return <LoadingSpinner />;
   if (error) return <div className="error">Error: {error}</div>;
@@ -376,6 +536,39 @@ const CivDashboard = () => {
             >
               💬 Messages
             </button>
+
+            {/* Gallery Button */}
+            <button
+              onClick={() => setShowGallery(true)}
+              style={{
+                marginTop: '10px',
+                width: '100%',
+                background: 'linear-gradient(135deg, #E91E63 0%, #C2185B 100%)',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                padding: '10px',
+                fontSize: '13px',
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                boxShadow: '0 3px 6px rgba(0,0,0,0.2)',
+                transition: 'all 0.3s ease',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px'
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.transform = 'translateY(-1px)';
+                e.target.style.boxShadow = '0 4px 8px rgba(0,0,0,0.3)';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.transform = 'translateY(0)';
+                e.target.style.boxShadow = '0 3px 6px rgba(0,0,0,0.2)';
+              }}
+            >
+              🎨 Gallery
+            </button>
           </div>
 
           {/* Competency Profile */}
@@ -458,36 +651,11 @@ const CivDashboard = () => {
             </div>
           </div>
 
-          {/* Powered by Claude Card */}
-          <div style={{ 
-            background: 'linear-gradient(135deg, #F0F8FF 0%, #E6F3FF 100%)',
-            border: '3px solid #8B4513',
-            borderRadius: '12px',
-            padding: '15px',
-            boxShadow: '0 4px 8px rgba(0,0,0,0.3)',
-            textAlign: 'center'
-          }}>
-            <div style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'center',
-              gap: '8px',
-              color: '#1E40AF', 
-              fontSize: '14px',
-              fontWeight: 'bold'
-            }}>
-              <span style={{ fontSize: '16px' }}>🤖</span>
-              Powered by Claude 4 Sonnet
-            </div>
-            <div style={{ 
-              color: '#1E40AF', 
-              fontSize: '11px',
-              marginTop: '4px',
-              opacity: 0.8
-            }}>
-              Advanced AI for competency analysis
-            </div>
-          </div>
+          {/* XP Leaderboard */}
+          <XPLeaderboard 
+            currentStudentId={studentId || 'sample_student'} 
+            compact={true} 
+          />
 
           {/* Resources Card */}
           <div 
@@ -1051,6 +1219,15 @@ const CivDashboard = () => {
         <MessageNotifications
           studentId={studentId || 'sample_student'}
           onOpenMessage={handleOpenMessageFromNotification}
+        />
+      )}
+
+      {/* Gallery */}
+      {showGallery && (
+        <GalleryGrid
+          currentStudentId={studentId || 'sample_student'}
+          currentStudentTeam={getStudentTeam(studentId)}
+          onClose={() => setShowGallery(false)}
         />
       )}
 

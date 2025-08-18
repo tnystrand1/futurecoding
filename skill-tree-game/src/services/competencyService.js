@@ -39,8 +39,14 @@ class CompetencyService {
         { key: 'careerInterests', label: 'What kind of careers are you most interested in? Why?' },
         { key: 'clientTeamFeeling', label: 'How are you feeling about your client project team?' }
       ];
+    } else if (dayNumber === 5) {
+      return [
+        { key: 'sprintBoardPhoto', label: 'Photo of sprint board', type: 'image' },
+        { key: 'clientWebsiteScreenshot', label: 'Screenshot of client website RIGHT NOW', type: 'image' },
+        { key: 'roleAndSuccess', label: 'What was your role today and how successful were you at it?' }
+      ];
     } else {
-      // Default questions for days 5+
+      // Default questions for days 6+
       return [
         { key: 'learned', label: 'What did you learn in class today?' },
         { key: 'challenges', label: 'What challenges did you face today?' },

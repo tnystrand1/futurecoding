@@ -2,11 +2,14 @@ import React, { useState, useEffect, useRef } from 'react';
 import EnhancedMessageBubble from './EnhancedMessageBubble';
 import EnhancedMessageComposer from './EnhancedMessageComposer';
 import enhancedMessagingService from '../../services/enhancedMessagingService';
+import { formatMessageTimestamp } from '../../utils/dateUtils';
+import { ConversationReadStatus } from './ReadReceipts';
 
 const EnhancedChatWindow = ({ conversation, currentStudentId, onBack }) => {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [readStatus, setReadStatus] = useState(null);
   const messagesEndRef = useRef(null);
 
   // Safety checks for conversation object
@@ -47,6 +50,7 @@ const EnhancedChatWindow = ({ conversation, currentStudentId, onBack }) => {
 
   useEffect(() => {
     loadMessages();
+    loadReadStatus();
     
     // Set up real-time listener
     const unsubscribe = enhancedMessagingService.listenToConversationMessages(
@@ -57,6 +61,9 @@ const EnhancedChatWindow = ({ conversation, currentStudentId, onBack }) => {
         
         // Mark messages as read
         enhancedMessagingService.markMessagesAsRead(conversation.id, currentStudentId);
+        
+        // Update read status
+        loadReadStatus();
       }
     );
 
@@ -81,6 +88,15 @@ const EnhancedChatWindow = ({ conversation, currentStudentId, onBack }) => {
     }
   };
 
+  const loadReadStatus = async () => {
+    try {
+      const status = await enhancedMessagingService.getConversationReadStatus(conversation.id, currentStudentId);
+      setReadStatus(status);
+    } catch (error) {
+      console.error('Error loading read status:', error);
+    }
+  };
+
   const scrollToBottom = () => {
     setTimeout(() => {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -101,29 +117,16 @@ const EnhancedChatWindow = ({ conversation, currentStudentId, onBack }) => {
       
       // Message will be added via real-time listener
       scrollToBottom();
+      
+      // Update read status after sending
+      setTimeout(() => loadReadStatus(), 500);
     } catch (error) {
       console.error('Error sending message:', error);
       alert('Failed to send message. Please try again.');
     }
   };
 
-  const formatTimestamp = (timestamp) => {
-    if (!timestamp) return '';
-    
-    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
-    const now = new Date();
-    const diffMs = now - date;
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-    const diffDays = Math.floor(diffMs / 86400000);
-
-    if (diffMins < 1) return 'Just now';
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays < 7) return `${diffDays}d ago`;
-    
-    return date.toLocaleDateString();
-  };
+  // Using centralized date utility to fix "Invalid Date" issues
 
   const getMessageStats = () => {
     const totalMessages = messages.length;
@@ -246,7 +249,7 @@ const EnhancedChatWindow = ({ conversation, currentStudentId, onBack }) => {
           fontSize: '18px',
           fontWeight: 'bold'
         }}>
-          {otherParticipantInfo?.avatar?.emoji || otherParticipantInfo?.name?.charAt(0) || '👤'}
+          {typeof otherParticipantInfo?.avatar === 'object' ? otherParticipantInfo.avatar?.emoji || '👤' : otherParticipantInfo?.avatar || otherParticipantInfo?.name?.charAt(0) || '👤'}
         </div>
         
         <div style={{ flex: 1 }}>
@@ -256,6 +259,11 @@ const EnhancedChatWindow = ({ conversation, currentStudentId, onBack }) => {
           <div style={{ fontSize: '12px', opacity: 0.8 }}>
             {stats.totalMessages} messages • {stats.codeMessages} code • {stats.imageMessages} images
           </div>
+          {readStatus && readStatus.totalSent > 0 && (
+            <div style={{ fontSize: '10px', opacity: 0.7, marginTop: '2px' }}>
+              <ConversationReadStatus readStatus={readStatus} compact={true} />
+            </div>
+          )}
         </div>
 
         <div style={{
@@ -264,7 +272,7 @@ const EnhancedChatWindow = ({ conversation, currentStudentId, onBack }) => {
           padding: '4px 8px',
           fontSize: '11px'
         }}>
-          {conversation.lastMessage?.timestamp && formatTimestamp(conversation.lastMessage.timestamp)}
+          {formatMessageTimestamp(conversation.lastMessage?.timestamp)}
         </div>
       </div>
 

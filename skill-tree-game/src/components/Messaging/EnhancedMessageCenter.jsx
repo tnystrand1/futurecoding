@@ -34,13 +34,27 @@ const EnhancedMessageCenter = ({ studentId, onClose }) => {
     try {
       const studentDirectory = await enhancedMessagingService.getStudentDirectory(studentId);
       const enrichedConversations = conversations.map(conv => {
-        const otherParticipantId = conv.participants.find(p => p !== studentId);
-        const participantInfo = studentDirectory.find(s => s.id === otherParticipantId);
-        
-        return {
-          ...conv,
-          participantInfo: participantInfo ? [participantInfo] : []
-        };
+        if (conv.isGroup) {
+          // For group conversations, get info for all participants
+          const participantInfos = conv.participants
+            .filter(p => p !== studentId)
+            .map(p => studentDirectory.find(s => s.id === p))
+            .filter(Boolean);
+          
+          return {
+            ...conv,
+            participantInfo: participantInfos
+          };
+        } else {
+          // For direct conversations, get the other participant
+          const otherParticipantId = conv.participants.find(p => p !== studentId);
+          const participantInfo = studentDirectory.find(s => s.id === otherParticipantId);
+          
+          return {
+            ...conv,
+            participantInfo: participantInfo ? [participantInfo] : []
+          };
+        }
       });
       
       setConversations(enrichedConversations);
@@ -148,8 +162,12 @@ const EnhancedMessageCenter = ({ studentId, onClose }) => {
   const getViewTitle = () => {
     switch (activeView) {
       case 'chat':
-        const otherParticipant = selectedConversation?.participantInfo?.[0];
-        return `💬 ${otherParticipant?.name || 'Chat'}`;
+        if (selectedConversation?.isGroup) {
+          return `🏆 ${selectedConversation.groupName || 'Group Chat'}`;
+        } else {
+          const otherParticipant = selectedConversation?.participantInfo?.[0];
+          return `💬 ${otherParticipant?.name || 'Chat'}`;
+        }
       case 'directory':
         return '👥 Find Classmates';
       default:
@@ -335,6 +353,8 @@ const EnhancedMessageCenter = ({ studentId, onClose }) => {
                   conversations={conversations}
                   currentStudentId={studentId}
                   onSelectConversation={handleSelectConversation}
+                  onNewMessage={() => setActiveView('directory')}
+                  onConversationUpdate={loadConversations}
                 />
               )}
 

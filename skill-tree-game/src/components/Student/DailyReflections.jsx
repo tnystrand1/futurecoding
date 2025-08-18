@@ -17,6 +17,9 @@ const DailyReflections = ({ studentId }) => {
     careerTakeaway: '',
     careerInterests: '',
     clientTeamFeeling: '',
+    sprintBoardPhoto: '',
+    clientWebsiteScreenshot: '',
+    roleAndSuccess: '',
     challenges: ''
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -62,8 +65,14 @@ const DailyReflections = ({ studentId }) => {
         { key: 'careerInterests', label: 'What kind of careers are you most interested in? Why?' },
         { key: 'clientTeamFeeling', label: 'How are you feeling about your client project team?' }
       ];
+    } else if (dayNumber === 5) {
+      return [
+        { key: 'sprintBoardPhoto', label: 'Photo of sprint board', type: 'image' },
+        { key: 'clientWebsiteScreenshot', label: 'Screenshot of client website RIGHT NOW', type: 'image' },
+        { key: 'roleAndSuccess', label: 'What was your role today and how successful were you at it?' }
+      ];
     } else {
-      // Default questions for days 5+
+      // Default questions for days 6+
       return [
         { key: 'learned', label: 'What did you learn in class today?' },
         { key: 'challenges', label: 'What challenges did you face today?' },
@@ -83,6 +92,9 @@ const DailyReflections = ({ studentId }) => {
       careerTakeaway: 'Share the most important insight or lesson from the career panel discussion...',
       careerInterests: 'Describe the careers that excite you and explain what draws you to them...',
       clientTeamFeeling: 'Reflect on your team dynamics, collaboration, and project progress...',
+      sprintBoardPhoto: 'Upload a photo of your team\'s sprint board...',
+      clientWebsiteScreenshot: 'Upload a screenshot of your client\'s current website...',
+      roleAndSuccess: 'Describe your specific role today and evaluate how well you performed it...',
       challenges: 'Describe any obstacles you encountered and how you approached them...'
     };
     return placeholders[key] || 'Share your thoughts...';

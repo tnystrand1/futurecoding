@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { detectUrls, renderTextWithLinks } from '../../utils/urlUtils';
+import { InlineLink } from '../Messaging/LinkPreview';
 
 const MessageFormatter = ({ content, isUser, personaColor }) => {
   const [copiedIndex, setCopiedIndex] = useState(null);
@@ -165,11 +167,32 @@ const MessageFormatter = ({ content, isUser, personaColor }) => {
           index: inlineIndex
         });
       } else if (inlinePart.trim()) {
-        inlineElements.push({
-          type: 'text',
-          content: inlinePart,
-          index: inlineIndex
-        });
+        // Check for URLs in text and render them as links
+        const urls = detectUrls(inlinePart);
+        if (urls.length > 0) {
+          const linkElements = renderTextWithLinks(inlinePart);
+          linkElements.forEach((linkElement, linkIndex) => {
+            if (typeof linkElement === 'string') {
+              inlineElements.push({
+                type: 'text',
+                content: linkElement,
+                index: `${inlineIndex}-text-${linkIndex}`
+              });
+            } else {
+              inlineElements.push({
+                type: 'link',
+                ...linkElement,
+                index: `${inlineIndex}-link-${linkIndex}`
+              });
+            }
+          });
+        } else {
+          inlineElements.push({
+            type: 'text',
+            content: inlinePart,
+            index: inlineIndex
+          });
+        }
       }
     });
 
@@ -362,6 +385,20 @@ const MessageFormatter = ({ content, isUser, personaColor }) => {
                     <em key={inlineElement.index} style={{ fontStyle: 'italic' }}>
                       {inlineElement.content}
                     </em>
+                  );
+                } else if (inlineElement.type === 'link') {
+                  return (
+                    <InlineLink
+                      key={inlineElement.index}
+                      url={inlineElement.url}
+                      originalUrl={inlineElement.originalUrl}
+                      domain={inlineElement.domain}
+                      isSafe={inlineElement.isSafe}
+                      urlType={inlineElement.urlType}
+                      style={{
+                        color: isUser ? '#F4E4BC' : '#3498db'
+                      }}
+                    />
                   );
                 } else {
                   return (

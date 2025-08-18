@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import MessageBubble from './MessageBubble';
 import MessageComposer from './MessageComposer';
 import messagingService from '../../services/messagingService';
+import { formatBubbleTimestamp } from '../../utils/dateUtils';
 
 const ChatWindow = ({ conversation, currentStudentId, onBack }) => {
   const [messages, setMessages] = useState([]);
@@ -61,12 +62,7 @@ const ChatWindow = ({ conversation, currentStudentId, onBack }) => {
     }
   };
 
-  const formatTimestamp = (timestamp) => {
-    if (!timestamp) return '';
-    
-    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  };
+  // Using centralized date utility to fix "Invalid Date" issues
 
   if (loading) {
     return (
@@ -228,7 +224,7 @@ const ChatWindow = ({ conversation, currentStudentId, onBack }) => {
                     opacity: 0.6,
                     margin: '10px 0'
                   }}>
-                    {formatTimestamp(message.timestamp)}
+                    {formatBubbleTimestamp(message.timestamp)}
                   </div>
                 )}
                 

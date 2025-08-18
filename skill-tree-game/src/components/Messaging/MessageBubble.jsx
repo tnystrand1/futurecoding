@@ -1,13 +1,11 @@
 import React, { useState } from 'react';
 import MessageFormatter from '../AI/MessageFormatter';
+import { formatBubbleTimestamp } from '../../utils/dateUtils';
+import ReadReceipts from './ReadReceipts';
 
 const MessageBubble = ({ message, isOwnMessage, senderInfo }) => {
   const [expandedImage, setExpandedImage] = useState(null);
-  const formatTime = (timestamp) => {
-    if (!timestamp) return '';
-    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  };
+  // Using centralized date utility to fix "Invalid Date" issues
 
   const getMessageTypeIcon = (text) => {
     const lowerText = text.toLowerCase();
@@ -199,17 +197,13 @@ const MessageBubble = ({ message, isOwnMessage, senderInfo }) => {
           color: '#8B4513',
           opacity: 0.6
         }}>
-          <span>{formatTime(message.timestamp)}</span>
-          
-          {/* Read Status for own messages */}
-          {isOwnMessage && (
-            <span style={{
-              fontSize: '12px',
-              color: message.isRead ? '#10b981' : '#6b7280'
-            }}>
-              {message.isRead ? '✓✓' : '✓'}
-            </span>
-          )}
+          <span>{formatBubbleTimestamp(message.timestamp)}</span>
+          <ReadReceipts 
+            message={message} 
+            isOwnMessage={isOwnMessage} 
+            showTimestamp={false}
+            compact={true}
+          />
         </div>
       </div>
 

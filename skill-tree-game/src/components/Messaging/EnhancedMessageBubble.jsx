@@ -1,15 +1,13 @@
 import React, { useState } from 'react';
 import MessageFormatter from '../AI/MessageFormatter';
+import { formatBubbleTimestamp } from '../../utils/dateUtils';
+import ReadReceipts from './ReadReceipts';
 
 const EnhancedMessageBubble = ({ message, isOwnMessage, senderInfo }) => {
   const [expandedImage, setExpandedImage] = useState(null);
   const [expandedCodeFile, setExpandedCodeFile] = useState(null);
   
-  const formatTime = (timestamp) => {
-    if (!timestamp) return '';
-    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  };
+  // Using centralized date utility to fix "Invalid Date" issues
 
   // Get attachments by type
   const imageAttachments = message.attachments?.filter(att => att.type === 'image') || [];
@@ -83,7 +81,7 @@ const EnhancedMessageBubble = ({ message, isOwnMessage, senderInfo }) => {
           fontWeight: 'bold',
           flexShrink: 0
         }}>
-          {senderInfo?.avatar?.emoji || senderInfo?.name?.charAt(0) || '👤'}
+          {typeof senderInfo?.avatar === 'object' ? senderInfo.avatar?.emoji || '👤' : senderInfo?.avatar || senderInfo?.name?.charAt(0) || '👤'}
         </div>
       )}
 
@@ -337,17 +335,24 @@ const EnhancedMessageBubble = ({ message, isOwnMessage, senderInfo }) => {
           </div>
         )}
         
-        {/* Timestamp */}
+        {/* Timestamp and Read Receipts */}
         <div style={{
           fontSize: '10px',
           opacity: 0.6,
           marginTop: '6px',
-          textAlign: isOwnMessage ? 'right' : 'left'
+          textAlign: isOwnMessage ? 'right' : 'left',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: isOwnMessage ? 'flex-end' : 'flex-start',
+          gap: '4px'
         }}>
-          {formatTime(message.timestamp)}
-          {message.isRead && isOwnMessage && (
-            <span style={{ marginLeft: '4px' }}>✓</span>
-          )}
+          <span>{formatBubbleTimestamp(message.timestamp)}</span>
+          <ReadReceipts 
+            message={message} 
+            isOwnMessage={isOwnMessage} 
+            showTimestamp={false}
+            compact={true}
+          />
         </div>
       </div>
 
