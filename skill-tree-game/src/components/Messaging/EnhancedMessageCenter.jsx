@@ -153,7 +153,10 @@ const EnhancedMessageCenter = ({ studentId, onClose }) => {
         participantInfo: otherStudentInfo ? [{
           id: otherStudentInfo.id || otherStudentId,
           name: otherStudentInfo.name || otherStudentId.replace(/_/g, ' '),
-          avatar: otherStudentInfo.avatar || { emoji: '👤', color1: '#FF8C42' }
+          avatar: {
+            emoji: typeof otherStudentInfo.avatar === 'object' ? otherStudentInfo.avatar?.emoji || '👤' : otherStudentInfo.avatar || '👤',
+            color1: typeof otherStudentInfo.avatar === 'object' ? otherStudentInfo.avatar?.color1 || '#FF8C42' : '#FF8C42'
+          }
         }] : [{
           id: otherStudentId,
           name: otherStudentId.replace(/_/g, ' '),
@@ -178,7 +181,7 @@ const EnhancedMessageCenter = ({ studentId, onClose }) => {
     }
   };
 
-  const handleSelectConversation = (conversation) => {
+  const handleSelectConversation = async (conversation) => {
     if (!conversation || !conversation.participants) {
       console.error('Invalid conversation object:', conversation);
       showNotification('Invalid conversation data', 'error');
@@ -188,6 +191,15 @@ const EnhancedMessageCenter = ({ studentId, onClose }) => {
     console.log('Selecting conversation:', conversation);
     setSelectedConversation(conversation);
     setActiveView('chat');
+    
+    // Immediately mark messages as read to clear notifications quickly
+    try {
+      await enhancedMessagingService.markMessagesAsRead(conversation.id, studentId);
+      // Refresh unread count
+      loadUnreadCount();
+    } catch (error) {
+      console.error('Error marking messages as read:', error);
+    }
   };
 
   const handleBackToConversations = () => {

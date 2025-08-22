@@ -119,4 +119,4 @@ The AI analyzes:
 Feature has been built, deployed, and is ready for testing at:
 **https://futurecoding.web.app**
 
-Access via Teacher Dashboard (password: TPZvibecodes!) → Competency Analytics tab
+Access via Teacher Dashboard (password: TPZVibes31!) → Competency Analytics tab

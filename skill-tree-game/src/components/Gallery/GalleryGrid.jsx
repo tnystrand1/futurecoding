@@ -102,7 +102,8 @@ const GalleryGrid = ({ currentStudentId, currentStudentTeam, onClose }) => {
   };
 
   const filteredProjects = getFilteredProjects();
-  const hasTeamProject = projects.some(p => p.teamId === currentStudentTeam);
+  const teamProjects = projects.filter(p => p.teamId === currentStudentTeam);
+  const teamProjectCount = teamProjects.length;
   
 
 
@@ -171,7 +172,7 @@ const GalleryGrid = ({ currentStudentId, currentStudentTeam, onClose }) => {
               fontSize: '14px',
               opacity: 0.8
             }}>
-              Showcase your team's amazing web development projects
+              Showcase your team's amazing web development projects - submit multiple projects!
             </p>
           </div>
 
@@ -213,51 +214,57 @@ const GalleryGrid = ({ currentStudentId, currentStudentTeam, onClose }) => {
               <span>⚠️</span>
               <span>No Team Assignment</span>
             </div>
-          ) : !hasTeamProject ? (
-            <button
-              onClick={() => setShowSubmissionForm(true)}
-              style={{
-                background: 'linear-gradient(135deg, #27ae60 0%, #2ecc71 100%)',
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
-                padding: '12px 20px',
-                fontSize: '14px',
-                fontWeight: 'bold',
-                cursor: 'pointer',
-                boxShadow: '0 4px 8px rgba(0,0,0,0.2)',
-                transition: 'all 0.3s ease',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px'
-              }}
-              onMouseEnter={(e) => {
-                e.target.style.transform = 'translateY(-2px)';
-                e.target.style.boxShadow = '0 6px 12px rgba(0,0,0,0.3)';
-              }}
-              onMouseLeave={(e) => {
-                e.target.style.transform = 'translateY(0)';
-                e.target.style.boxShadow = '0 4px 8px rgba(0,0,0,0.2)';
-              }}
-            >
-              <span>📤</span>
-              <span>Submit Project</span>
-            </button>
           ) : (
-            <div style={{
-              background: 'rgba(46, 204, 113, 0.1)',
-              border: '2px solid #2ecc71',
-              borderRadius: '8px',
-              padding: '12px 20px',
-              fontSize: '14px',
-              color: '#8B4513',
-              fontWeight: 'bold',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px'
-            }}>
-              <span>✅</span>
-              <span>Project Submitted</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              {/* Project Count Display */}
+              {teamProjectCount > 0 && (
+                <div style={{
+                  background: 'rgba(52, 152, 219, 0.1)',
+                  border: '2px solid #3498db',
+                  borderRadius: '8px',
+                  padding: '8px 16px',
+                  fontSize: '12px',
+                  color: '#8B4513',
+                  fontWeight: 'bold',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}>
+                  <span>🏆</span>
+                  <span>{teamProjectCount} Project{teamProjectCount !== 1 ? 's' : ''} Submitted</span>
+                </div>
+              )}
+              
+              {/* Submit Button */}
+              <button
+                onClick={() => setShowSubmissionForm(true)}
+                style={{
+                  background: 'linear-gradient(135deg, #27ae60 0%, #2ecc71 100%)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  padding: '12px 20px',
+                  fontSize: '14px',
+                  fontWeight: 'bold',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 8px rgba(0,0,0,0.2)',
+                  transition: 'all 0.3s ease',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.transform = 'translateY(-2px)';
+                  e.target.style.boxShadow = '0 6px 12px rgba(0,0,0,0.3)';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.transform = 'translateY(0)';
+                  e.target.style.boxShadow = '0 4px 8px rgba(0,0,0,0.2)';
+                }}
+              >
+                <span>📤</span>
+                <span>{teamProjectCount === 0 ? 'Submit First Project' : 'Submit Another Project'}</span>
+              </button>
             </div>
           )}
         </div>
@@ -454,7 +461,7 @@ const GalleryGrid = ({ currentStudentId, currentStudentTeam, onClose }) => {
               {searchTerm 
                 ? 'Try different keywords or filters'
                 : filter === 'myTeam'
-                  ? 'Submit your first team project to get started!'
+                  ? 'Submit your team projects to get started!'
                   : 'Be the first to showcase your amazing work!'
               }
             </div>

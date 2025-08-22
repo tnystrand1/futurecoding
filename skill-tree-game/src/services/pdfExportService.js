@@ -42,7 +42,18 @@ export class PDFExportService {
       pdf.text(`Primary Model: ${competencyAnalysis.model_comparison.primary_model}`, this.margin, yPosition);
       yPosition += this.lineHeight;
       pdf.text(`Secondary Model: ${competencyAnalysis.model_comparison.secondary_model}`, this.margin, yPosition);
-      yPosition += 15;
+      yPosition += this.lineHeight;
+      
+      // Add API cost information
+      if (competencyAnalysis.totalApiCost) {
+        pdf.text(`API Cost: ${competencyAnalysis.totalApiCost.costBreakdown}`, this.margin, yPosition);
+        yPosition += this.lineHeight;
+        const tokenInfo = `Tokens: ${competencyAnalysis.totalApiCost.totalInputTokens.toLocaleString()} input, ${competencyAnalysis.totalApiCost.totalOutputTokens.toLocaleString()} output`;
+        pdf.text(tokenInfo, this.margin, yPosition);
+        yPosition += this.lineHeight;
+      }
+      
+      yPosition += 10;
     }
 
     // Competency Summary
@@ -87,7 +98,7 @@ export class PDFExportService {
       if (unlockedSkills.length > 0) {
         unlockedSkills.forEach(([skillId, skill]) => {
           const status = skill.mastered ? 'Mastered' : 'In Progress';
-          const xp = skill.xp || 0;
+          const xp = skill.xpEarned || skill.xpReward || skill.xp || 0;
           
           if (yPosition > this.pageHeight - 30) {
             pdf.addPage();

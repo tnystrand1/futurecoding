@@ -58,8 +58,40 @@ const DailyReflectionsViewer = () => {
         { key: 'clientWebsiteScreenshot', label: 'Screenshot of client website RIGHT NOW', type: 'image' },
         { key: 'roleAndSuccess', label: 'What was your role today and how successful were you at it?' }
       ];
+    } else if (dayNumber === 6) {
+      return [
+        { key: 'clientFeedback', label: 'What feedback did you receive from your client today? Was it helpful? What are your next steps?' },
+        { key: 'clientWebsiteProgress', label: 'Upload a screenshot of your client website right now', type: 'image', optional: true },
+        { key: 'aiToolsUsage', label: 'Have you been using other AI tools other than the built in chat bot? If so, tell us why and how.' }
+      ];
+    } else if (dayNumber === 7) {
+      return [
+        { key: 'clientProcess', label: 'Reflect on the process of building a website for a client? Was it challenging to understand their needs? Are you proud of your work?' },
+        { key: 'teamwork', label: 'Tell us about your teamwork with your client team. Did you use your scrum roles? Did everyone contribute?' }
+      ];
+    } else if (dayNumber === 8) {
+      return [
+        { 
+          key: 'steamInterestRating', 
+          label: 'STEAM Interest',
+          description: 'Exploration of one\'s identity through STEAM, both in and out of class',
+          type: 'rating'
+        },
+        { 
+          key: 'belongingRating', 
+          label: 'Sense of Belonging',
+          description: 'Feeling connected to a learning community or professional setting, and accepted and valued by peers and adults in it',
+          type: 'rating'
+        },
+        { 
+          key: 'communicationRating', 
+          label: 'Communication',
+          description: 'Ability to clearly exchange information with others in various settings and for various purposes',
+          type: 'rating'
+        }
+      ];
     } else {
-      // Default questions for days 6+
+      // Default questions for days 9+
       return [
         { key: 'learned', label: 'What did you learn in class today?' },
         { key: 'challenges', label: 'What challenges did you face today?' },
@@ -329,6 +361,8 @@ const DailyReflectionsViewer = () => {
                             {content ? (
                               firstQuestion.type === 'image' ? 
                                 '📷 Image uploaded' : 
+                              firstQuestion.type === 'rating' ?
+                                `⭐ Self-rated: ${content ? content.charAt(0).toUpperCase() + content.slice(1) : 'Not rated'}` :
                                 content.substring(0, 100) + (content.length > 100 ? '...' : '')
                             ) : 'No response'}
                           </div>
@@ -418,6 +452,55 @@ const DailyReflectionsViewer = () => {
                             <div style={{ display: 'none', color: '#ef4444', fontStyle: 'italic' }}>
                               ❌ Image failed to load: {selectedReflection[question.key]}
                             </div>
+                          </div>
+                        ) : question.type === 'rating' ? (
+                          <div>
+                            {/* Competency Definition */}
+                            <div style={{
+                              background: 'rgba(124, 58, 237, 0.05)',
+                              border: '1px solid rgba(124, 58, 237, 0.2)',
+                              borderRadius: '6px',
+                              padding: '12px',
+                              marginBottom: '12px',
+                              fontSize: '13px',
+                              color: '#374151'
+                            }}>
+                              <strong>Definition:</strong> {question.description}
+                            </div>
+                            
+                            {/* Rating */}
+                            <div style={{
+                              fontSize: '20px',
+                              fontWeight: 'bold',
+                              color: '#7c3aed',
+                              marginBottom: '12px',
+                              textAlign: 'center',
+                              background: 'rgba(124, 58, 237, 0.1)',
+                              padding: '12px',
+                              borderRadius: '6px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '8px'
+                            }}>
+                              {selectedReflection[question.key] === 'emerging' && '🌱 Emerging'}
+                              {selectedReflection[question.key] === 'developing' && '🔄 Developing'}
+                              {selectedReflection[question.key] === 'proficient' && '⭐ Proficient'}
+                              {!['emerging', 'developing', 'proficient'].includes(selectedReflection[question.key]) && 
+                                `Self-rated: ${selectedReflection[question.key] || 'No rating'}`}
+                            </div>
+                            
+                            {/* Explanation */}
+                            {selectedReflection[question.key + 'Explanation'] && (
+                              <div>
+                                <div style={{ fontWeight: 'bold', marginBottom: '8px', color: '#374151' }}>
+                                  Explanation:
+                                </div>
+                                <div style={{ whiteSpace: 'pre-wrap' }}>
+                                  {selectedReflection[question.key + 'Explanation']}
+                                </div>
+                              </div>
+                            )}
                           </div>
                         ) : (
                           selectedReflection[question.key]

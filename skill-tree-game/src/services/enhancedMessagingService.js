@@ -45,47 +45,99 @@ class EnhancedMessagingService {
           messageType = hasText ? 'code_mixed' : 'code';
         }
         
-        // Process all attachments
+        // Process all attachments - ensure all values are serializable
         attachments.forEach(attachment => {
-          if (attachment.type === 'image') {
-            processedAttachments.push({
-              id: String(attachment.id || Date.now() + Math.random()),
-              type: 'image',
-              name: String(attachment.name || 'image.png'),
-              size: Number(attachment.size || 0),
-              dataUrl: String(attachment.dataUrl || '')
-            });
-          } else if (attachment.type === 'code') {
-            processedAttachments.push({
-              id: String(attachment.id || Date.now() + Math.random()),
-              type: 'code',
-              name: String(attachment.name || 'code.txt'),
-              size: Number(attachment.size || 0),
-              content: String(attachment.content || ''),
-              language: String(attachment.language || 'text')
-            });
+          try {
+            if (attachment.type === 'image') {
+              // Ensure all fields are primitive types for Firestore
+              const processedAttachment = {
+                id: String(attachment.id || `img_${Date.now()}_${Math.floor(Math.random() * 1000)}`),
+                type: 'image',
+                name: String(attachment.name || 'image.png').slice(0, 255), // Limit name length
+                size: Math.max(0, Number(attachment.size) || 0), // Ensure positive number
+                dataUrl: String(attachment.dataUrl || '').slice(0, 10000000) // Limit dataUrl size (10MB)
+              };
+              
+              // Additional validation for dataUrl format
+              if (processedAttachment.dataUrl && !processedAttachment.dataUrl.startsWith('data:')) {
+                console.warn('Invalid dataUrl format, skipping attachment:', processedAttachment.name);
+                return; // Skip this attachment
+              }
+              
+              // Remove any undefined, null, or invalid values
+              Object.keys(processedAttachment).forEach(key => {
+                const value = processedAttachment[key];
+                if (value === undefined || value === null || 
+                    (typeof value === 'number' && isNaN(value)) ||
+                    (typeof value === 'string' && value.length === 0 && key !== 'dataUrl')) {
+                  delete processedAttachment[key];
+                }
+              });
+              
+              processedAttachments.push(processedAttachment);
+            } else if (attachment.type === 'code') {
+              const processedAttachment = {
+                id: String(attachment.id || `code_${Date.now()}_${Math.floor(Math.random() * 1000)}`),
+                type: 'code',
+                name: String(attachment.name || 'code.txt').slice(0, 255), // Limit name length
+                size: Math.max(0, Number(attachment.size) || 0), // Ensure positive number
+                content: String(attachment.content || '').slice(0, 1000000), // Limit content size (1MB)
+                language: String(attachment.language || 'text').slice(0, 50) // Limit language length
+              };
+              
+              // Remove any undefined, null, or invalid values
+              Object.keys(processedAttachment).forEach(key => {
+                const value = processedAttachment[key];
+                if (value === undefined || value === null || 
+                    (typeof value === 'number' && isNaN(value)) ||
+                    (typeof value === 'string' && value.length === 0 && key !== 'content')) {
+                  delete processedAttachment[key];
+                }
+              });
+              
+              processedAttachments.push(processedAttachment);
+            }
+          } catch (attachmentError) {
+            console.error('Error processing attachment:', attachmentError, attachment);
+            // Skip this attachment and continue with others
           }
         });
       }
 
-      // Create message document
+      // Create message document - ensure all fields are Firestore-serializable
       const messageData = {
-        conversationId,
-        senderId,
-        receiverId,
-        text: hasText ? text.trim() : '',
+        conversationId: String(conversationId),
+        senderId: String(senderId),
+        receiverId: String(receiverId),
+        text: String(hasText ? text.trim() : ''),
         timestamp: serverTimestamp(),
-        messageType,
+        messageType: String(messageType),
         isRead: false,
         readAt: null,
         deliveredAt: serverTimestamp(), // Message is delivered when created
-        competencyTags: this.analyzeMessageForCompetencyTags(text, processedAttachments)
+        competencyTags: this.analyzeMessageForCompetencyTags(text, processedAttachments) || []
       };
 
       // Only add attachments field if we have attachments
       if (processedAttachments.length > 0) {
         messageData.attachments = processedAttachments;
       }
+
+      // Clean up any undefined values that might cause serialization issues
+      Object.keys(messageData).forEach(key => {
+        if (messageData[key] === undefined) {
+          delete messageData[key];
+        }
+      });
+
+      // Debug logging before attempting to save
+      console.log('Attempting to save message with data:', {
+        conversationId: messageData.conversationId,
+        messageType: messageData.messageType,
+        hasAttachments: !!messageData.attachments,
+        attachmentCount: messageData.attachments?.length || 0,
+        attachmentTypes: messageData.attachments?.map(att => ({ type: att.type, hasDataUrl: !!att.dataUrl })) || []
+      });
 
       const messageRef = await addDoc(this.messagesRef, messageData);
 
@@ -117,6 +169,54 @@ class EnhancedMessagingService {
       };
     } catch (error) {
       console.error('Error sending message:', error);
+      console.error('Failed message data:', {
+        conversationId,
+        senderId,
+        receiverId,
+        textLength: text?.length || 0,
+        attachmentCount: processedAttachments?.length || 0,
+        attachmentData: processedAttachments?.map(att => ({
+          type: att.type,
+          id: att.id,
+          name: att.name,
+          size: att.size,
+          hasDataUrl: att.type === 'image' ? !!att.dataUrl : undefined,
+          dataUrlLength: att.type === 'image' ? att.dataUrl?.length : undefined
+        }))
+      });
+      
+      // If it's a serialization error, try sending without attachments as fallback
+      if (error.message?.includes('nested entity') && processedAttachments.length > 0) {
+        console.warn('Attempting to send message without attachments as fallback...');
+        try {
+          const fallbackMessageData = {
+            conversationId: String(conversationId),
+            senderId: String(senderId),
+            receiverId: String(receiverId),
+            text: String(hasText ? text.trim() + ' [Attachments failed to send]' : '[Attachments failed to send]'),
+            timestamp: serverTimestamp(),
+            messageType: 'text',
+            isRead: false,
+            readAt: null,
+            deliveredAt: serverTimestamp(),
+            competencyTags: []
+          };
+          
+          const fallbackRef = await addDoc(this.messagesRef, fallbackMessageData);
+          console.log('Fallback message sent successfully');
+          
+          return {
+            success: true,
+            messageId: fallbackRef.id,
+            messageType: 'text',
+            attachmentCount: 0,
+            warning: 'Message sent but attachments failed to upload'
+          };
+        } catch (fallbackError) {
+          console.error('Fallback message also failed:', fallbackError);
+        }
+      }
+      
       throw error;
     }
   }
@@ -314,6 +414,21 @@ class EnhancedMessagingService {
         );
       }
 
+      // Additional validation: ensure student is actually a current participant
+      // This prevents showing conversations where the student was removed but data is inconsistent
+      conversations = conversations.filter(conv => {
+        // For direct conversations, ensure student is one of exactly 2 participants
+        if (!conv.isGroup) {
+          return conv.participants && conv.participants.length === 2 && conv.participants.includes(studentId);
+        }
+        
+        // For group conversations, ensure student is still in participants array
+        // and the conversation is active
+        return conv.participants && 
+               conv.participants.includes(studentId) && 
+               conv.participants.length >= 2; // Groups need at least 2 people
+      });
+
       return conversations;
     } catch (error) {
       console.warn('Indexed query failed, using fallback:', error);
@@ -322,7 +437,19 @@ class EnhancedMessagingService {
       const allConversationsSnapshot = await getDocs(this.conversationsRef);
       let conversations = allConversationsSnapshot.docs
         .map(doc => ({ id: doc.id, ...doc.data() }))
-        .filter(conv => conv.participants.includes(studentId))
+        .filter(conv => {
+          // Basic participant check
+          if (!conv.participants || !conv.participants.includes(studentId)) {
+            return false;
+          }
+          
+          // Additional validation: ensure student is actually a current participant
+          if (!conv.isGroup) {
+            return conv.participants.length === 2;
+          } else {
+            return conv.participants.length >= 2;
+          }
+        })
         .sort((a, b) => {
           const aTime = a.lastMessage?.timestamp?.toDate?.() || new Date(0);
           const bTime = b.lastMessage?.timestamp?.toDate?.() || new Date(0);

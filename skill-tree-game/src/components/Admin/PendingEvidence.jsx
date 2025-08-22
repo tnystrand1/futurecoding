@@ -30,6 +30,7 @@ const PendingEvidence = () => {
                 skillData.evidence.code || 
                 skillData.evidence.reflection || 
                 skillData.evidence.screenshot ||
+                skillData.evidence.questionAnswers ||
                 skillData.evidence['project-brief'] ||
                 skillData.evidence['client-feedback'] ||
                 skillData.evidence['refactored-code'] ||
@@ -198,6 +199,38 @@ const PendingEvidence = () => {
                   }}>
                     {item.evidence.reflection}
                   </div>
+                </div>
+              )}
+
+              {item.evidence.questionAnswers && Array.isArray(item.evidence.questionAnswers) && (
+                <div style={{ marginTop: '12px' }}>
+                  <strong>❓ Reflection Questions:</strong>
+                  {item.evidence.questionAnswers.map((answer, index) => {
+                    // Get the questions for this skill if available
+                    const skill = SKILL_TREE[item.skillId];
+                    const questions = skill?.unlockCriteria?.questions || [];
+                    const question = questions[index] || `Question ${index + 1}`;
+                    
+                    return (
+                      <div key={index} style={{ 
+                        marginTop: '8px',
+                        padding: '8px',
+                        background: 'white',
+                        border: '1px solid #ddd',
+                        borderRadius: '4px'
+                      }}>
+                        <div style={{ fontWeight: 'bold', color: '#7c3aed', marginBottom: '4px', fontSize: '14px' }}>
+                          Q{index + 1}: {question}
+                        </div>
+                        <div style={{ 
+                          lineHeight: '1.5',
+                          whiteSpace: 'pre-wrap'
+                        }}>
+                          {answer || 'No answer provided'}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
 

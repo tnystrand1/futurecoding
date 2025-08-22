@@ -90,7 +90,8 @@ const GroupCreator = ({
 
   const getParticipantAvatar = (participantId) => {
     const student = availableStudents.find(s => s.id === participantId);
-    return student?.avatar || '👤';
+    // Extract emoji safely to avoid React serialization errors
+    return typeof student?.avatar === 'object' ? student.avatar?.emoji || '👤' : student?.avatar || '👤';
   };
 
   return (

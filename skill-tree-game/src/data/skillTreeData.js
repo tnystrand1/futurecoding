@@ -171,8 +171,11 @@ export const SKILL_TREE = {
     xpReward: 100,
     prerequisites: ['output_evaluation'],
     unlockCriteria: {
-      evidence: ['reflection', 'screenshot'],
-      prompt: "Conduct user testing and document feedback"
+      evidence: ['reflection'],
+      questions: [
+        "What did you learn from your PEERS user testing your website?",
+        "What change did you make to your website based on user testing?"
+      ]
     },
     featuresUnlocked: ['user-feedback-integration'],
     description: "Get real feedback on your designs"
@@ -213,15 +216,18 @@ export const SKILL_TREE = {
   // TIER 3: SPECIALIZATIONS
   ai_tool_evaluation: {
     id: 'ai_tool_evaluation',
-    name: 'AI Tool Evaluation',
+    name: 'Unlock: AI Tool Evaluation',
     tier: 3,
     position: { x: 600, y: 150 },
     competency: 'Critical AI Literacy',
     xpReward: 150,
     prerequisites: ['ai_assisted_debugging'],
     unlockCriteria: {
-      evidence: ['reflection', 'comparison'],
-      prompt: "Compare different AI tools and their effectiveness"
+      evidence: ['reflection'],
+      questions: [
+        "Which AI tools did you compare for your web development project and what were the key differences in their outputs?",
+        "Based on your testing, which AI tool was most effective for your needs and why?"
+      ]
     },
     featuresUnlocked: ['ai-powered-features'],
     description: "Become an expert at choosing the right AI tools"
@@ -289,6 +295,23 @@ export const SKILL_TREE = {
     },
     featuresUnlocked: ['live-website', 'custom-domain'],
     description: "Share your work with the world"
+  },
+
+  copy_writing: {
+    id: 'copy_writing',
+    name: 'Copy Writing',
+    tier: 3,
+    position: { x: 300, y: 150 },
+    competency: 'Communication',
+    xpReward: 150,
+    prerequisites: ['user_testing'],
+    unlockCriteria: {
+      evidence: ['client-feedback', 'reflection'],
+      minWords: 150,
+      prompt: "Submit polished copy you wrote for a client project (website headlines, descriptions, call-to-action buttons, etc.) along with client feedback or approval. Reflect on how you tailored the messaging to the target audience."
+    },
+    featuresUnlocked: ['copy-optimization', 'content-management', 'seo-headlines'],
+    description: "Master the art of persuasive writing for web projects"
   }
 };
 
@@ -296,22 +319,22 @@ export const DEVELOPER_PROFILES = {
   community: {
     id: 'community',
     name: 'The Community-Centered Designer',
-    requiredSkills: ['client_discovery', 'user_testing', 'accessibility'],
+    requiredSkills: ['client_discovery', 'user_testing', 'accessibility', 'copy_writing'],
     bonusCompetency: 'Sense of Belonging',
     perks: {
       xpMultiplier: 1.2,
-      specialFeatures: ['community-feedback-widget', 'multilingual-support']
+      specialFeatures: ['community-feedback-widget', 'multilingual-support', 'persuasive-messaging']
     },
     description: "You build with empathy and inclusion at the forefront"
   },
   creative: {
     id: 'creative',
     name: 'The Creative Technologist',
-    requiredSkills: ['cultural_mapping', 'css_variables', 'descriptive_prompting'],
+    requiredSkills: ['cultural_mapping', 'css_variables', 'descriptive_prompting', 'copy_writing'],
     bonusCompetency: 'STEAM Interest',
     perks: {
       xpMultiplier: 1.2,
-      specialFeatures: ['advanced-animations', 'generative-backgrounds']
+      specialFeatures: ['advanced-animations', 'generative-backgrounds', 'content-storytelling']
     },
     description: "You blend art and code to create unique experiences"
   },

@@ -7,6 +7,7 @@ const DocumentModal = ({ skill, onSubmit, onClose }) => {
   const existingEvidence = useMemo(() => skill.studentData?.evidence, [skill.studentData?.evidence]);
   const hasExistingEvidence = useMemo(() => existingEvidence && (
     existingEvidence.reflection || 
+    existingEvidence.questionAnswers ||
     existingEvidence.code || 
     existingEvidence.screenshot || 
     existingEvidence.aiChat ||
@@ -18,18 +19,30 @@ const DocumentModal = ({ skill, onSubmit, onClose }) => {
   
   // Debug logging removed to prevent console spam
   
-  const [evidence, setEvidence] = useState(() => ({
-    type: existingEvidence?.type || '',
-    reflection: existingEvidence?.reflection || '',
-    code: existingEvidence?.code || '',
-    screenshot: existingEvidence?.screenshot || '',
-    aiChat: existingEvidence?.aiChat || '',
-    // Custom evidence types
-    'project-brief': existingEvidence?.['project-brief'] || '',
-    'client-feedback': existingEvidence?.['client-feedback'] || '',
-    'refactored-code': existingEvidence?.['refactored-code'] || '',
-    'test-results': existingEvidence?.['test-results'] || ''
-  }));
+  const [evidence, setEvidence] = useState(() => {
+    const baseEvidence = {
+      type: existingEvidence?.type || '',
+      reflection: existingEvidence?.reflection || '',
+      code: existingEvidence?.code || '',
+      screenshot: existingEvidence?.screenshot || '',
+      aiChat: existingEvidence?.aiChat || '',
+      // Custom evidence types
+      'project-brief': existingEvidence?.['project-brief'] || '',
+      'client-feedback': existingEvidence?.['client-feedback'] || '',
+      'refactored-code': existingEvidence?.['refactored-code'] || '',
+      'test-results': existingEvidence?.['test-results'] || ''
+    };
+
+    // Handle multiple questions format
+    if (skill.unlockCriteria?.questions && existingEvidence?.questionAnswers) {
+      baseEvidence.questionAnswers = existingEvidence.questionAnswers;
+    } else if (skill.unlockCriteria?.questions) {
+      // Initialize empty answers for each question
+      baseEvidence.questionAnswers = skill.unlockCriteria.questions.map(() => '');
+    }
+
+    return baseEvidence;
+  });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [viewMode, setViewMode] = useState(hasExistingEvidence ? 'view' : 'edit');
 
@@ -47,6 +60,12 @@ const DocumentModal = ({ skill, onSubmit, onClose }) => {
 
   const validateEvidence = () => {
     const criteria = skill.unlockCriteria;
+    
+    // Check for multiple questions format
+    if (criteria.questions && evidence.questionAnswers) {
+      // All questions must have answers
+      return evidence.questionAnswers.every(answer => answer.trim().length > 0);
+    }
     
     // Check each required evidence type
     for (const evidenceType of criteria.evidence) {
@@ -69,6 +88,39 @@ const DocumentModal = ({ skill, onSubmit, onClose }) => {
   const renderEvidenceView = (evidenceType) => {
     const fieldKey = evidenceType === 'ai-chat' ? 'aiChat' : evidenceType;
     const value = evidence[fieldKey];
+    
+    // Handle multiple questions format for reflections
+    if (evidenceType === 'reflection' && skill.unlockCriteria?.questions && evidence.questionAnswers) {
+      return (
+        <div className={styles.field} key={`view-${evidenceType}`}>
+          <label style={{ fontWeight: 'bold', color: '#2c3e50' }}>
+            Reflection Questions
+          </label>
+          {skill.unlockCriteria.questions.map((question, index) => (
+            <div key={index} style={{ marginBottom: '16px', marginTop: '12px' }}>
+              <div style={{ 
+                fontSize: '14px', 
+                fontWeight: 'bold', 
+                color: '#555',
+                marginBottom: '8px'
+              }}>
+                Question {index + 1}: {question}
+              </div>
+              <div style={{
+                background: '#f8f9fa',
+                border: '1px solid #e9ecef',
+                borderRadius: '4px',
+                padding: '12px',
+                whiteSpace: 'pre-wrap',
+                lineHeight: '1.4'
+              }}>
+                {evidence.questionAnswers[index] || 'No answer provided'}
+              </div>
+            </div>
+          ))}
+        </div>
+      );
+    }
     
     if (!value) return null;
     
@@ -129,6 +181,44 @@ const DocumentModal = ({ skill, onSubmit, onClose }) => {
     
     switch (evidenceType) {
       case 'reflection':
+        // Check if this skill uses multiple questions format
+        if (skill.unlockCriteria?.questions) {
+          return (
+            <div className={styles.field} key={evidenceType}>
+              <label>Reflection Questions</label>
+              {skill.unlockCriteria.questions.map((question, index) => (
+                <div key={index} style={{ marginBottom: '16px' }}>
+                  <label style={{ 
+                    fontSize: '14px', 
+                    fontWeight: 'normal', 
+                    color: '#555',
+                    display: 'block',
+                    marginBottom: '8px'
+                  }}>
+                    Question {index + 1}: {question}
+                  </label>
+                  <textarea
+                    value={evidence.questionAnswers?.[index] || ''}
+                    onChange={(e) => {
+                      const newAnswers = [...(evidence.questionAnswers || [])];
+                      newAnswers[index] = e.target.value;
+                      setEvidence({...evidence, questionAnswers: newAnswers});
+                    }}
+                    rows={4}
+                    placeholder="Type your answer here..."
+                    className={styles.textarea}
+                    style={{ marginBottom: '4px' }}
+                  />
+                  <div className={styles.wordCount}>
+                    {getWordCount(evidence.questionAnswers?.[index] || '')} words
+                  </div>
+                </div>
+              ))}
+            </div>
+          );
+        }
+        
+        // Default single reflection
         return (
           <div className={styles.field} key={evidenceType}>
             <label>Reflection</label>

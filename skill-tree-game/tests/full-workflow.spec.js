@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Complete Skill Tree Workflow', () => {
-  const teacherPassword = 'TPZvibecodes!';
+  const teacherPassword = 'TPZVibes31!';
   const testStudentName = 'Test Student';
   
   test.beforeEach(async ({ page }) => {

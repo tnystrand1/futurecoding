@@ -15,6 +15,8 @@ const CodeCriticChat = ({ studentId, studentData, onClose }) => {
   const [currentDay, setCurrentDay] = useState(1);
   const [uploadedImage, setUploadedImage] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
+  const [isPoppedOut, setIsPoppedOut] = useState(false);
+  const [popOutWindow, setPopOutWindow] = useState(null);
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
 
@@ -317,6 +319,261 @@ const CodeCriticChat = ({ studentId, studentData, onClose }) => {
     }
   };
 
+  // Handle pop-out to new window
+  const handlePopOut = () => {
+    if (isPoppedOut || popOutWindow) return; // Prevent multiple pop-outs
+    
+    const newWindow = window.open(
+      '',
+      'codecritic-popout',
+      'width=1200,height=800,scrollbars=yes,resizable=yes,toolbar=no,menubar=no,location=no,status=no'
+    );
+    
+    if (!newWindow) {
+      alert('Pop-up blocked! Please allow pop-ups for this site and try again.');
+      return;
+    }
+
+    // Store window reference and update state
+    setPopOutWindow(newWindow);
+    setIsPoppedOut(true);
+
+    // Set up the pop-out window content
+    newWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>CodeCritic - ${personas[selectedPersona]?.name}</title>
+          <meta charset="utf-8">
+          <style>
+            body { 
+              margin: 0; 
+              font-family: system-ui, -apple-system, sans-serif;
+              background: white;
+              overflow: hidden;
+            }
+            .popout-container { 
+              height: 100vh; 
+              display: flex; 
+              flex-direction: column;
+              border: 3px solid ${personas[selectedPersona]?.color || '#9147FF'};
+            }
+            .popout-header {
+              padding: 16px 20px;
+              background: ${personas[selectedPersona]?.color || '#9147FF'};
+              color: white;
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              border-bottom: 1px solid rgba(255,255,255,0.2);
+            }
+            .popout-messages {
+              flex: 1;
+              overflow-y: auto;
+              padding: 20px;
+              background: white;
+            }
+            .popout-input {
+              padding: 20px;
+              border-top: 2px solid #f0f0f0;
+              background: white;
+            }
+            .message {
+              margin-bottom: 16px;
+              padding: 12px 16px;
+              border-radius: 12px;
+              max-width: 80%;
+              word-wrap: break-word;
+            }
+            .user-message {
+              background: #e3f2fd;
+              margin-left: auto;
+              text-align: right;
+            }
+            .ai-message {
+              background: #f5f5f5;
+              margin-right: auto;
+            }
+            .input-area {
+              display: flex;
+              gap: 12px;
+              align-items: flex-end;
+            }
+            .message-input {
+              flex: 1;
+              padding: 12px;
+              border: 2px solid #ddd;
+              border-radius: 8px;
+              resize: vertical;
+              min-height: 44px;
+              font-family: inherit;
+            }
+            .send-button {
+              padding: 12px 24px;
+              background: ${personas[selectedPersona]?.color || '#9147FF'};
+              color: white;
+              border: none;
+              border-radius: 8px;
+              cursor: pointer;
+              font-weight: bold;
+            }
+            .close-button {
+              background: rgba(255,255,255,0.2);
+              border: none;
+              color: white;
+              border-radius: 4px;
+              padding: 4px 8px;
+              cursor: pointer;
+              font-size: 12px;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="popout-container">
+            <div class="popout-header">
+              <div style="display: flex; align-items: center; gap: 12px;">
+                <span style="font-size: 20px;">${personas[selectedPersona]?.emoji}</span>
+                <div>
+                  <div style="font-weight: bold; font-size: 14px;">
+                    CodeCritic: ${personas[selectedPersona]?.name}
+                  </div>
+                  <div style="font-size: 12px; opacity: 0.8;">
+                    Day ${currentDay}/8 • ${studentData?.name || 'Student'}
+                  </div>
+                </div>
+              </div>
+              <button class="close-button" onclick="window.close()" title="Close Window">
+                ×
+              </button>
+            </div>
+            <div class="popout-messages" id="messages-container">
+              <div style="text-align: center; color: #666; padding: 20px;">
+                <p>✨ Welcome to your dedicated CodeCritic window!</p>
+                <p>You can now maximize this window for the ultimate coding assistant experience.</p>
+              </div>
+            </div>
+            <div class="popout-input">
+              <div class="input-area">
+                <textarea 
+                  class="message-input" 
+                  id="message-input"
+                  placeholder="Type your message here..."
+                  rows="1"
+                ></textarea>
+                <button class="send-button" id="send-button">Send</button>
+              </div>
+            </div>
+          </div>
+        </body>
+      </html>
+    `);
+    newWindow.document.close();
+
+    // Set up messaging between windows
+    const popoutMessagesContainer = newWindow.document.getElementById('messages-container');
+    const popoutMessageInput = newWindow.document.getElementById('message-input');
+    const popoutSendButton = newWindow.document.getElementById('send-button');
+
+    // Render existing messages
+    const renderMessages = () => {
+      popoutMessagesContainer.innerHTML = messages.map(message => `
+        <div class="message ${message.isUser ? 'user-message' : 'ai-message'}">
+          ${message.content.replace(/\n/g, '<br>')}
+        </div>
+      `).join('');
+      
+      // Auto-scroll to bottom
+      popoutMessagesContainer.scrollTop = popoutMessagesContainer.scrollHeight;
+    };
+
+    // Initial render
+    renderMessages();
+
+    // Handle sending messages from pop-out
+    const sendMessageFromPopout = async () => {
+      const messageText = popoutMessageInput.value.trim();
+      if (!messageText || isLoading) return;
+
+      popoutMessageInput.value = '';
+      
+      // Add user message to both windows
+      const userMessage = {
+        id: Date.now().toString(),
+        content: messageText,
+        isUser: true,
+        timestamp: new Date()
+      };
+      
+      setMessages(prev => [...prev, userMessage]);
+      
+      // Send message through main window logic
+      try {
+        setIsLoading(true);
+        const response = await aiService.sendMessage(conversationId, messageText, selectedPersona, uploadedImage);
+        
+        if (response.success) {
+          const aiMessage = {
+            id: (Date.now() + 1).toString(),
+            content: response.message,
+            isUser: false,
+            timestamp: new Date()
+          };
+          
+          setMessages(prev => [...prev, aiMessage]);
+        }
+      } catch (error) {
+        console.error('Error sending message from popout:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    // Event listeners
+    popoutSendButton.addEventListener('click', sendMessageFromPopout);
+    popoutMessageInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessageFromPopout();
+      }
+    });
+
+    // Handle window close
+    newWindow.addEventListener('beforeunload', () => {
+      setIsPoppedOut(false);
+      setPopOutWindow(null);
+    });
+
+    // Focus the new window and input
+    newWindow.focus();
+    setTimeout(() => popoutMessageInput.focus(), 100);
+  };
+
+  // Sync messages to pop-out window
+  useEffect(() => {
+    if (isPoppedOut && popOutWindow && !popOutWindow.closed) {
+      const popoutMessagesContainer = popOutWindow.document.getElementById('messages-container');
+      if (popoutMessagesContainer) {
+        popoutMessagesContainer.innerHTML = messages.map(message => `
+          <div class="message ${message.isUser ? 'user-message' : 'ai-message'}">
+            ${message.content.replace(/\n/g, '<br>')}
+          </div>
+        `).join('');
+        
+        // Auto-scroll to bottom
+        popoutMessagesContainer.scrollTop = popoutMessagesContainer.scrollHeight;
+      }
+    }
+  }, [messages, isPoppedOut, popOutWindow]);
+
+  // Clean up pop-out window on component unmount
+  useEffect(() => {
+    return () => {
+      if (popOutWindow && !popOutWindow.closed) {
+        popOutWindow.close();
+      }
+    };
+  }, [popOutWindow]);
+
   // Persona Selection Screen
   if (!selectedPersona) {
     return (
@@ -324,8 +581,8 @@ const CodeCriticChat = ({ studentId, studentData, onClose }) => {
         position: 'fixed',
         bottom: '20px',
         right: '20px',
-        width: '400px',
-        height: '500px',
+        width: '600px',
+        height: '700px',
         background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
         borderRadius: '20px',
         boxShadow: '0 20px 40px rgba(0,0,0,0.3)',
@@ -434,14 +691,46 @@ const CodeCriticChat = ({ studentId, studentData, onClose }) => {
     );
   }
 
+  // Show minimized "pop back in" button when popped out
+  if (isPoppedOut) {
+    return (
+      <div style={{
+        position: 'fixed',
+        bottom: '20px',
+        right: '20px',
+        background: personas[selectedPersona]?.color || '#9147FF',
+        color: 'white',
+        padding: '12px 16px',
+        borderRadius: '12px',
+        cursor: 'pointer',
+        boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+        fontSize: '14px',
+        fontWeight: 'bold',
+        zIndex: 1000
+      }} onClick={() => {
+        if (popOutWindow && !popOutWindow.closed) {
+          popOutWindow.close();
+        }
+        setIsPoppedOut(false);
+        setPopOutWindow(null);
+      }}>
+        <span style={{ fontSize: '16px' }}>{personas[selectedPersona]?.emoji}</span>
+        Pop Back In
+      </div>
+    );
+  }
+
   // Chat Interface
   return (
     <div style={{
       position: 'fixed',
       bottom: '20px',
       right: '20px',
-      width: isMinimized ? '300px' : (isExpanded ? 'min(600px, calc(100vw - 40px))' : 'min(400px, calc(100vw - 40px))'),
-      height: isMinimized ? '60px' : (isExpanded ? 'min(700px, calc(100vh - 40px))' : 'min(600px, calc(100vh - 40px))'),
+      width: isMinimized ? '300px' : (isExpanded ? 'min(800px, calc(100vw - 40px))' : 'min(600px, calc(100vw - 40px))'),
+      height: isMinimized ? '60px' : (isExpanded ? 'min(900px, calc(100vh - 40px))' : 'min(700px, calc(100vh - 40px))'),
       maxWidth: 'calc(100vw - 40px)',
       maxHeight: 'calc(100vh - 40px)',
       background: 'white',
@@ -520,24 +809,44 @@ const CodeCriticChat = ({ studentId, studentData, onClose }) => {
           )}
           {/* Always show expand/collapse and minimize controls */}
           {!isMinimized && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setIsExpanded(!isExpanded);
-              }}
-              style={{
-                background: 'rgba(255,255,255,0.2)',
-                border: 'none',
-                color: 'white',
-                borderRadius: '4px',
-                padding: '4px 8px',
-                cursor: 'pointer',
-                fontSize: '12px'
-              }}
-              title={isExpanded ? 'Contract' : 'Expand'}
-            >
-              {isExpanded ? '⇲' : '⇱'}
-            </button>
+            <>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handlePopOut();
+                }}
+                style={{
+                  background: 'rgba(255,255,255,0.2)',
+                  border: 'none',
+                  color: 'white',
+                  borderRadius: '4px',
+                  padding: '4px 8px',
+                  cursor: 'pointer',
+                  fontSize: '12px'
+                }}
+                title="Pop Out to New Window"
+              >
+                🗗
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsExpanded(!isExpanded);
+                }}
+                style={{
+                  background: 'rgba(255,255,255,0.2)',
+                  border: 'none',
+                  color: 'white',
+                  borderRadius: '4px',
+                  padding: '4px 8px',
+                  cursor: 'pointer',
+                  fontSize: '12px'
+                }}
+                title={isExpanded ? 'Contract' : 'Expand'}
+              >
+                {isExpanded ? '⇲' : '⇱'}
+              </button>
+            </>
           )}
           <button
             onClick={(e) => {

@@ -771,6 +771,119 @@ Success Moments: ${memory.success_moments.slice(-2).join('; ') || 'None'}`;
     }
   }
 
+  // Validate student answer against competency question
+  async validateAnswer(question, answer, competencyType) {
+    try {
+      if (!this.apiKey) {
+        throw new Error('OpenRouter API key not configured');
+      }
+
+      const validationPrompt = `You are a supportive educator evaluating a high school student's reflection for a competency self-assessment.
+
+COMPETENCY: ${competencyType}
+QUESTION: ${question}
+STUDENT ANSWER: ${answer}
+
+Evaluate if this answer is a genuine, coherent response that connects to the competency in a meaningful way.
+
+Respond with a JSON object:
+{
+  "isValid": true/false,
+  "confidence": 0.0-1.0,
+  "feedback": "Brief, encouraging feedback (max 80 characters)",
+  "suggestion": "Optional specific suggestion for improvement (max 100 characters)"
+}
+
+VALIDATION CRITERIA (be GENEROUS and SUPPORTIVE):
+- Is the answer coherent and written in the student's own words?
+- Does it show any connection to the competency (even if basic)?
+- Does it demonstrate some personal reflection or experience?
+- Is it a genuine attempt (not obviously copied/generic)?
+
+MARK AS VALID if:
+- Student shares any personal experience related to the competency
+- Answer shows honest self-reflection (even if simple)
+- Student demonstrates understanding of the competency concept
+- Response is coherent and connects to the question
+
+ONLY mark invalid if the answer is completely off-topic, nonsensical, or obviously not a genuine attempt.
+
+Be encouraging and focus on what they did well rather than what's missing.`;
+
+      const response = await fetch(this.baseUrl, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this.apiKey}`,
+          'Content-Type': 'application/json',
+          'HTTP-Referer': window.location.origin,
+          'X-Title': 'FUTURE CODING ACADEMY - Answer Validation'
+        },
+        body: JSON.stringify({
+          model: this.model,
+          messages: [
+            {
+              role: 'system',
+              content: 'You are a helpful educational assistant that provides constructive feedback on student reflections. Always respond with valid JSON.'
+            },
+            {
+              role: 'user',
+              content: validationPrompt
+            }
+          ],
+          temperature: 0.3,
+          max_tokens: 200,
+          stream: false
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Validation API error: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      const aiResponse = data.choices?.[0]?.message?.content;
+      
+      if (!aiResponse) {
+        throw new Error('Empty validation response');
+      }
+
+      // Parse JSON response (handle markdown code blocks)
+      let jsonText = aiResponse.trim();
+      
+      // Remove markdown code block formatting if present
+      if (jsonText.startsWith('```json')) {
+        jsonText = jsonText.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+      } else if (jsonText.startsWith('```')) {
+        jsonText = jsonText.replace(/^```\s*/, '').replace(/\s*```$/, '');
+      }
+      
+      const validation = JSON.parse(jsonText);
+      
+      return {
+        success: true,
+        ...validation
+      };
+
+    } catch (error) {
+      console.error('Error validating answer:', error);
+      
+      // If it's a JSON parsing error, log the raw response for debugging
+      if (error instanceof SyntaxError && error.message.includes('JSON')) {
+        console.error('Raw AI response that failed to parse:', aiResponse);
+      }
+      
+      // Fallback for when AI validation fails - be generous and accept the answer
+      return {
+        success: false,
+        isValid: answer.trim().length >= 150, // Basic fallback validation
+        confidence: 0.5,
+        feedback: "Great reflection! (Validation temporarily unavailable)",
+        suggestion: null,
+        error: error.message
+      };
+    }
+  }
+
   // Export full chat log for a student (for end of class)
   async exportStudentChatLog(studentId) {
     try {

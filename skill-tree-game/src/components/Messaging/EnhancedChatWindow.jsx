@@ -203,7 +203,9 @@ const EnhancedChatWindow = ({ conversation, currentStudentId, onBack }) => {
     <div style={{
       display: 'flex',
       flexDirection: 'column',
-      height: '600px',
+      height: '100%',
+      minHeight: '500px',
+      maxHeight: 'calc(100vh - 40px)', // Responsive height with max limit
       background: 'white',
       borderRadius: '12px',
       overflow: 'hidden',
@@ -280,8 +282,11 @@ const EnhancedChatWindow = ({ conversation, currentStudentId, onBack }) => {
       <div style={{
         flex: 1,
         overflowY: 'auto',
+        overflowX: 'hidden', // Prevent horizontal overflow
         padding: '16px 0',
-        background: 'linear-gradient(to bottom, #f8f9fa 0%, #ffffff 100%)'
+        background: 'linear-gradient(to bottom, #f8f9fa 0%, #ffffff 100%)',
+        minHeight: '200px', // Ensure minimum visible area for messages
+        scrollBehavior: 'smooth' // Smooth scrolling for better UX
       }}>
         {messages.length === 0 ? (
           <div style={{

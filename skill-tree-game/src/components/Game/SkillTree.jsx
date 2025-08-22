@@ -10,6 +10,20 @@ const SkillTree = ({ studentId, studentProgress, onSkillClick }) => {
   const isSkillUnlocked = (skillId) => {
     return studentProgress.skills?.[skillId]?.unlocked || false;
   };
+
+  const hasSkillEvidenceSubmitted = (skillId) => {
+    const skillData = studentProgress.skills?.[skillId];
+    return skillData?.evidenceSubmitted && skillData?.evidence?.status === 'pending';
+  };
+
+  const getSkillStatus = (skillId) => {
+    const skillData = studentProgress.skills?.[skillId];
+    
+    if (isSkillUnlocked(skillId)) return 'unlocked';
+    if (hasSkillEvidenceSubmitted(skillId)) return 'pending';
+    if (skillData?.evidence?.status === 'rejected') return 'rejected';
+    return 'available';
+  };
   
   const isSkillAvailable = (skill) => {
     // Make all skills available for evidence submission
@@ -55,7 +69,7 @@ const SkillTree = ({ studentId, studentProgress, onSkillClick }) => {
           <SkillNode
             key={skill.id}
             skill={skill}
-            unlocked={isSkillUnlocked(skill.id)}
+            status={getSkillStatus(skill.id)}
             available={isSkillAvailable(skill)}
             onHover={setHoveredSkill}
             onClick={() => onSkillClick(skill)}

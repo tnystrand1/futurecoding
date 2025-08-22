@@ -1,11 +1,21 @@
 import React from 'react';
 import styles from './SkillNode.module.css';
 
-const SkillNode = ({ skill, unlocked, available, onHover, onClick }) => {
+const SkillNode = ({ skill, status, available, onHover, onClick }) => {
   const getNodeClass = () => {
-    if (unlocked) return styles.unlocked;
+    if (status === 'unlocked') return styles.unlocked;
+    if (status === 'pending') return styles.pending;
+    if (status === 'rejected') return styles.rejected;
     if (available) return styles.available;
     return styles.locked;
+  };
+
+  const getStatusLabel = () => {
+    if (status === 'unlocked') return 'Completed';
+    if (status === 'pending') return 'Under Review';
+    if (status === 'rejected') return 'Needs Revision';
+    if (available) return 'Available';
+    return 'Locked';
   };
 
   return (
@@ -23,6 +33,7 @@ const SkillNode = ({ skill, unlocked, available, onHover, onClick }) => {
 
       <div className={styles.name}>{skill.name}</div>
       <div className={styles.tier}>Tier {skill.tier}</div>
+      <div className={styles.status}>{getStatusLabel()}</div>
     </div>
   );
 };

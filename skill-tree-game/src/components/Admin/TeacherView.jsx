@@ -32,7 +32,7 @@ const TeacherView = () => {
 
   const handleLogin = (e) => {
     e.preventDefault();
-    const correctPassword = 'TPZvibecodes!';
+    const correctPassword = 'TPZVibes31!';
     
     if (password === correctPassword) {
       setIsAuthenticated(true);

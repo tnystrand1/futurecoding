@@ -6,10 +6,68 @@ import ModernDashboard from './components/Student/ModernDashboard';
 import UserSelector from './components/Student/UserSelector';
 import TeacherView from './components/Admin/TeacherView';
 import WorkingMessagingTest from './components/Messaging/WorkingMessagingTest';
+import AuthProvider, { useAuth } from './components/Auth/AuthProvider';
+import LoginForm from './components/Auth/LoginForm';
 import { useFeatureFlags } from './hooks/useFeatureFlags';
 import './styles/tailwind.css';
 import './styles/globals.css';
 import './styles/pixels.css';
+
+// Loading spinner component
+function LoadingSpinner() {
+  return (
+    <div style={{
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      background: 'linear-gradient(135deg, #2c3e50 0%, #34495e 100%)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      flexDirection: 'column',
+      fontFamily: '"Segoe UI", Tahoma, Geneva, Verdana, sans-serif'
+    }}>
+      <div style={{
+        width: '50px',
+        height: '50px',
+        border: '4px solid rgba(139, 69, 19, 0.3)',
+        borderLeft: '4px solid #8B4513',
+        borderRadius: '50%',
+        animation: 'spin 1s linear infinite',
+        marginBottom: '20px'
+      }}></div>
+      <div style={{
+        color: '#8B4513',
+        fontSize: '16px',
+        fontWeight: 'bold'
+      }}>
+        Loading Web Dev Skill Tree...
+      </div>
+      <style>{`
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      `}</style>
+    </div>
+  );
+}
+
+function ProtectedApp() {
+  const { isAuthenticated, isLoading } = useAuth();
+
+  if (isLoading) {
+    return <LoadingSpinner />;
+  }
+
+  if (!isAuthenticated) {
+    return <LoginForm />;
+  }
+
+  return <AppContent />;
+}
 
 function AppContent() {
   const flags = useFeatureFlags();
@@ -86,9 +144,11 @@ function AppContent() {
 
 function App() {
   return (
-    <Router>
-      <AppContent />
-    </Router>
+    <AuthProvider>
+      <Router>
+        <ProtectedApp />
+      </Router>
+    </AuthProvider>
   );
 }
 

@@ -14,9 +14,45 @@ class CompetencyService {
   constructor() {
     this.apiKey = import.meta.env.VITE_OPENROUTER_API_KEY;
     this.baseUrl = 'https://openrouter.ai/api/v1/chat/completions';
-    this.primaryModel = 'anthropic/claude-3-5-sonnet-20241022'; // Primary model for analysis
+    this.primaryModel = 'anthropic/claude-sonnet-4'; // Primary model for analysis
     this.secondaryModel = 'google/gemini-2.5-flash'; // Secondary model for interrater reliability
     this.initializeCompetencies();
+  }
+
+  // Helper function to map student ID to team ID
+  getStudentTeamId(studentId) {
+    // Map students to their team IDs based on the team structure from ProjectSubmission.jsx
+    const studentTeamMap = {
+      // Jeremy Client Teams
+      'Charles': 'jeremy_client_team_1',
+      'Julius': 'jeremy_client_team_1', 
+      'Robert': 'jeremy_client_team_1',
+      'Matthew': 'jeremy_client_team_2',
+      'Ocasio': 'jeremy_client_team_2',
+      'Taii': 'jeremy_client_team_2',
+      
+      // Fiona Client Teams  
+      'Aaron': 'fiona_client_team_1',
+      'Luis': 'fiona_client_team_1',
+      'Sapphire': 'fiona_client_team_1',
+      'Anthony': 'fiona_client_team_2',
+      'Jephte': 'fiona_client_team_2',
+      'Keyler': 'fiona_client_team_2',
+      
+      // Jonathan Client Teams
+      'Miguel T': 'jonathan_client_team_1',
+      'Mikayla': 'jonathan_client_team_1',
+      'Seyvon': 'jonathan_client_team_1',
+      'Yousha': 'jonathan_client_team_1',
+      'Aiden': 'jonathan_client_team_2',
+      'Fradauryn': 'jonathan_client_team_2',
+      'Romain': 'jonathan_client_team_2'
+    };
+    
+    // Convert underscore format to regular name for lookup
+    const studentName = studentId.replace(/_/g, ' ');
+    
+    return studentTeamMap[studentName] || 'unassigned_team';
   }
 
   // Helper function to get questions for a specific day (matches student and teacher components)
@@ -45,8 +81,43 @@ class CompetencyService {
         { key: 'clientWebsiteScreenshot', label: 'Screenshot of client website RIGHT NOW', type: 'image' },
         { key: 'roleAndSuccess', label: 'What was your role today and how successful were you at it?' }
       ];
+    } else if (dayNumber === 6) {
+      return [
+        { key: 'clientFeedback', label: 'What feedback did you receive from your client today? Was it helpful? What are your next steps?' },
+        { key: 'clientWebsiteProgress', label: 'Upload a screenshot of your client website right now', type: 'image', optional: true },
+        { key: 'aiToolsUsage', label: 'Have you been using other AI tools other than the built in chat bot? If so, tell us why and how.' }
+      ];
+    } else if (dayNumber === 7) {
+      return [
+        { key: 'clientProcess', label: 'Reflect on the process of building a website for a client? Was it challenging to understand their needs? Are you proud of your work?' },
+        { key: 'teamwork', label: 'Tell us about your teamwork with your client team. Did you use your scrum roles? Did everyone contribute?' }
+      ];
+    } else if (dayNumber === 8) {
+      return [
+        { 
+          key: 'steamInterestRatingExplanation', 
+          label: 'STEAM Interest: Exploration of one\'s identity through STEAM, both in and out of class. Rate yourself as Emerging/Developing/Proficient and explain why.',
+          type: 'rating',
+          competency: 'steam_interest',
+          definition: 'Exploration of one\'s identity through STEAM, both in and out of class'
+        },
+        { 
+          key: 'belongingRatingExplanation', 
+          label: 'Sense of Belonging: Feeling connected to a learning community or professional setting, and accepted and valued by peers and adults in it. Rate yourself as Emerging/Developing/Proficient and explain why.',
+          type: 'rating',
+          competency: 'sense_of_belonging',
+          definition: 'Feeling connected to a learning community or professional setting, and accepted and valued by peers and adults in it'
+        },
+        { 
+          key: 'communicationRatingExplanation', 
+          label: 'Communication: Ability to clearly exchange information with others in various settings and for various purposes. Rate yourself as Emerging/Developing/Proficient and explain why.',
+          type: 'rating',
+          competency: 'communication',
+          definition: 'Ability to clearly exchange information with others in various settings and for various purposes'
+        }
+      ];
     } else {
-      // Default questions for days 6+
+      // Default questions for days 9+
       return [
         { key: 'learned', label: 'What did you learn in class today?' },
         { key: 'challenges', label: 'What challenges did you face today?' },
@@ -140,7 +211,11 @@ class CompetencyService {
         artifacts: [],
         reflections: [],
         chatInteractions: [],
-        skillsUnlocked: []
+        skillsUnlocked: [],
+        galleryProjects: [],
+        galleryInteractions: [],
+        achievements: [],
+        progressMetrics: {}
       };
 
       // Get student's approved skills and evidence
@@ -149,12 +224,53 @@ class CompetencyService {
         const studentData = studentDoc.data();
         const skills = studentData.skills || {};
         
+        // Extract progress metrics with XP validation
+        const calculatedXP = Object.values(skills)
+          .filter(skill => skill.unlocked)
+          .reduce((sum, skill) => sum + (skill.xpEarned || 0), 0);
+          
+        const storedXP = studentData.totalXP || 0;
+        
+        // Log XP discrepancy if found
+        if (calculatedXP !== storedXP) {
+          console.warn(`🚨 XP MISMATCH for ${studentId}:`, {
+            storedXP,
+            calculatedXP,
+            difference: Math.abs(storedXP - calculatedXP),
+            unlockedSkills: Object.entries(skills)
+              .filter(([_, skill]) => skill.unlocked)
+              .map(([id, skill]) => ({ id, xpEarned: skill.xpEarned }))
+          });
+        }
+        
+        evidence.progressMetrics = {
+          totalXP: storedXP, // Use stored value but log discrepancies
+          calculatedXP, // Include calculated value for comparison
+          currentLevel: studentData.currentLevel || 1,
+          websitePower: studentData.websitePower || 0,
+          developerProfile: studentData.developerProfile || null,
+          joinedAt: studentData.joinedAt
+        };
+        
+        // Extract achievements
+        if (studentData.achievements && Array.isArray(studentData.achievements)) {
+          evidence.achievements = studentData.achievements.map(achievement => ({
+            type: achievement.type,
+            title: achievement.title,
+            description: achievement.description,
+            earnedAt: achievement.earnedAt,
+            xpReward: achievement.xpReward
+          }));
+        }
+        
         Object.entries(skills).forEach(([skillId, skillData]) => {
           if (skillData.unlocked && skillData.evidence?.status === 'approved') {
             evidence.skillsUnlocked.push({
               skillId,
               evidence: skillData.evidence,
-              unlockedAt: skillData.unlockedAt || skillData.evidence.submittedAt
+              unlockedAt: skillData.unlockedAt || skillData.evidence.submittedAt,
+              xpEarned: skillData.xpEarned || 0,
+              xpReward: skillData.xpReward || skillData.xpEarned || 0
             });
             
             // Extract artifacts and reflections
@@ -163,6 +279,20 @@ class CompetencyService {
                 skillId,
                 content: skillData.evidence.reflection,
                 timestamp: skillData.evidence.submittedAt
+              });
+            }
+            
+            // Handle multiple questions format
+            if (skillData.evidence.questionAnswers && Array.isArray(skillData.evidence.questionAnswers)) {
+              const combinedContent = skillData.evidence.questionAnswers
+                .map((answer, index) => `Question ${index + 1}: ${answer}`)
+                .join('\n\n');
+              
+              evidence.reflections.push({
+                skillId,
+                content: combinedContent,
+                timestamp: skillData.evidence.submittedAt,
+                type: 'multi_question'
               });
             }
 
@@ -247,12 +377,48 @@ class CompetencyService {
           const reflectionData = reflectionDoc.data();
           const dailyReflections = reflectionData.dailyReflections || {};
           
+          console.log(`📅 Processing daily reflections for ${studentId}:`, {
+            totalReflectionDays: Object.keys(dailyReflections).length,
+            dayNumbers: Object.values(dailyReflections).map(r => r.dayNumber).sort((a, b) => a - b)
+          });
+          
+          const includedDays = [];
+          const excludedDays = [];
+          
           Object.values(dailyReflections).forEach(reflection => {
             // Get the questions for this day to validate and extract data
             const questions = this.getQuestionsForDay(reflection.dayNumber);
-            const hasAllAnswers = questions.every(q => reflection[q.key] && reflection[q.key].trim());
             
-            if (hasAllAnswers) {
+            // Enhanced validation that handles different field types and optional fields
+            const hasRequiredAnswers = questions.every(q => {
+              // Skip validation for optional fields
+              if (q.optional) return true;
+              
+              const value = reflection[q.key];
+              if (!value) return false;
+              
+              // For string fields, check if trimmed value exists
+              if (typeof value === 'string') {
+                return value.trim().length > 0;
+              }
+              
+              // For non-string fields (images, etc), just check if value exists
+              return true;
+            });
+            
+            console.log(`🔍 Day ${reflection.dayNumber} reflection validation:`, {
+              dayNumber: reflection.dayNumber,
+              questions: questions.map(q => ({ key: q.key, type: q.type, optional: q.optional })),
+              reflectionKeys: Object.keys(reflection),
+              hasRequiredAnswers,
+              fieldValidation: questions.map(q => ({
+                key: q.key,
+                exists: !!reflection[q.key],
+                value: typeof reflection[q.key] === 'string' ? reflection[q.key].substring(0, 50) + '...' : typeof reflection[q.key]
+              }))
+            });
+            
+            if (hasRequiredAnswers) {
               const reflectionData = {
                 type: 'daily_reflection',
                 dayNumber: reflection.dayNumber,
@@ -269,11 +435,146 @@ class CompetencyService {
               });
               
               evidence.reflections.push(reflectionData);
+              includedDays.push(reflection.dayNumber);
+            } else {
+              const missingFields = questions.filter(q => !q.optional && !reflection[q.key]).map(q => q.key);
+              let reason = 'Missing required fields';
+              
+              // Special check for Day 8 field name mismatch
+              if (reflection.dayNumber === 8) {
+                const oldFieldNames = ['steamInterestRating', 'belongingRating', 'communicationRating'];
+                const hasOldFields = oldFieldNames.some(field => reflection[field]);
+                if (hasOldFields) {
+                  reason = 'Field name mismatch - found old field names instead of expected *Explanation fields';
+                  console.warn(`⚠️ Day 8 reflection has old field names:`, {
+                    expectedFields: questions.map(q => q.key),
+                    foundOldFields: oldFieldNames.filter(field => reflection[field]),
+                    allReflectionKeys: Object.keys(reflection)
+                  });
+                }
+              }
+              
+              excludedDays.push({
+                day: reflection.dayNumber,
+                reason,
+                missingFields
+              });
             }
           });
+          
+          // Log summary of included vs excluded days
+          console.log(`✅ Reflection days INCLUDED in competency analysis:`, includedDays.sort((a, b) => a - b));
+          console.log(`❌ Reflection days EXCLUDED from competency analysis:`, excludedDays);
         }
       } catch (error) {
         console.warn('Could not fetch daily reflections:', error);
+      }
+
+      // Get gallery projects and interactions
+      try {
+        // Get student's gallery projects (by team ID for team projects)
+        const studentTeamId = this.getStudentTeamId(studentId); // Helper method to map student to team
+        
+        // Query gallery projects
+        let galleryQuery;
+        if (studentTeamId) {
+          galleryQuery = query(
+            collection(db, 'galleries'),
+            where('teamId', '==', studentTeamId),
+            orderBy('createdAt', 'desc')
+          );
+        } else {
+          // Fallback: look for projects where the student might be individually listed
+          galleryQuery = query(
+            collection(db, 'galleries'),
+            orderBy('createdAt', 'desc')
+          );
+        }
+        
+        const gallerySnapshot = await getDocs(galleryQuery);
+        gallerySnapshot.docs.forEach(projectDoc => {
+          const projectData = projectDoc.data();
+          
+          // Filter to only include projects from student's team if no direct match
+          if (!studentTeamId || projectData.teamId === studentTeamId) {
+            evidence.galleryProjects.push({
+              id: projectDoc.id,
+              title: projectData.title,
+              description: projectData.description,
+              websiteUrl: projectData.websiteUrl,
+              technologies: projectData.technologies || [],
+              teamId: projectData.teamId,
+              teamName: projectData.teamName,
+              createdAt: projectData.createdAt,
+              metrics: projectData.metrics || {}
+            });
+          }
+        });
+
+        // Get gallery interactions (comments, likes, etc.) by this student
+        try {
+          const interactionsQuery = query(
+            collection(db, 'gallery_interactions'),
+            where('studentId', '==', studentId),
+            orderBy('createdAt', 'desc')
+          );
+          
+          const interactionsSnapshot = await getDocs(interactionsQuery);
+          interactionsSnapshot.docs.forEach(interactionDoc => {
+            const interactionData = interactionDoc.data();
+            evidence.galleryInteractions.push({
+              type: interactionData.type, // 'like', 'comment', 'reaction'
+              galleryId: interactionData.galleryId,
+              content: interactionData.content, // For comments
+              reaction: interactionData.reaction, // For reactions
+              createdAt: interactionData.createdAt
+            });
+          });
+        } catch (indexError) {
+          console.warn(`⚠️ Gallery interactions query failed (missing Firestore index): ${indexError.message}`);
+          console.warn(`📋 Falling back to simpler query without orderBy...`);
+          
+          try {
+            // Fallback: query without orderBy to avoid index requirement
+            const fallbackQuery = query(
+              collection(db, 'gallery_interactions'),
+              where('studentId', '==', studentId)
+            );
+            
+            const fallbackSnapshot = await getDocs(fallbackQuery);
+            const interactions = fallbackSnapshot.docs.map(doc => ({
+              id: doc.id,
+              ...doc.data()
+            }));
+            
+            // Sort manually by createdAt
+            interactions.sort((a, b) => {
+              const aCreated = a.createdAt;
+              const bCreated = b.createdAt;
+              if (!aCreated && !bCreated) return 0;
+              if (!aCreated) return 1;
+              if (!bCreated) return -1;
+              return bCreated.toMillis() - aCreated.toMillis();
+            });
+            
+            interactions.forEach(interactionData => {
+              evidence.galleryInteractions.push({
+                type: interactionData.type,
+                galleryId: interactionData.galleryId,
+                content: interactionData.content,
+                reaction: interactionData.reaction,
+                createdAt: interactionData.createdAt
+              });
+            });
+            
+            console.log(`✅ Retrieved ${evidence.galleryInteractions.length} gallery interactions using fallback query`);
+          } catch (fallbackError) {
+            console.warn(`❌ Gallery interactions fallback also failed: ${fallbackError.message}`);
+          }
+        }
+
+      } catch (error) {
+        console.warn('Could not fetch gallery data:', error);
       }
 
       return evidence;
@@ -298,11 +599,23 @@ class CompetencyService {
       const combinedAnalysis = this.mergeAnalyses(primaryAnalysis, secondaryAnalysis);
       combinedAnalysis.studentId = studentId;
       combinedAnalysis.analysisDate = new Date().toISOString();
+      
+      // Log cost summary
+      if (combinedAnalysis.totalApiCost) {
+        console.log(`💰 Analysis cost summary for ${studentId}:`, {
+          totalCost: `$${combinedAnalysis.totalApiCost.totalCost.toFixed(4)}`,
+          tokenUsage: `${combinedAnalysis.totalApiCost.totalInputTokens.toLocaleString()} input + ${combinedAnalysis.totalApiCost.totalOutputTokens.toLocaleString()} output`,
+          breakdown: combinedAnalysis.totalApiCost.costBreakdown
+        });
+      }
       combinedAnalysis.evidenceCount = {
         artifacts: evidence.artifacts.length,
         reflections: evidence.reflections.length,
         chatInteractions: evidence.chatInteractions.length,
-        skillsUnlocked: evidence.skillsUnlocked.length
+        skillsUnlocked: evidence.skillsUnlocked.length,
+        galleryProjects: evidence.galleryProjects.length,
+        galleryInteractions: evidence.galleryInteractions.length,
+        achievements: evidence.achievements.length
       };
       
       // Add evidence snippets and metrics
@@ -334,7 +647,10 @@ class CompetencyService {
         artifacts: evidence.artifacts.length,
         reflections: evidence.reflections.length,
         chatInteractions: evidence.chatInteractions.length,
-        skillsUnlocked: evidence.skillsUnlocked.length
+        skillsUnlocked: evidence.skillsUnlocked.length,
+        galleryProjects: evidence.galleryProjects.length,
+        galleryInteractions: evidence.galleryInteractions.length,
+        achievements: evidence.achievements.length
       };
       
       singleAnalysis.evidenceSnippets = this.extractEvidenceSnippets(evidence);
@@ -365,17 +681,19 @@ class CompetencyService {
 
   // Helper method to run analysis with specific model
   async analyzeCompetenciesWithModel(modelName, evidence, studentId = null) {
-    const evidenceSummary = this.prepareEvidenceSummary(evidence, studentId);
+    const evidenceSummary = this.prepareEvidenceSummary(evidence, studentId, modelName);
     const competencyDefinitionsText = this.formatCompetencyDefinitions();
 
     const prompt = `
-Analyze student evidence for 8 competencies. Return ONLY valid JSON.
+CRITICAL: Return ONLY raw JSON - no markdown, no code blocks, no explanations.
+
+Analyze student evidence for 8 competencies. Output pure JSON only.
 
 IMPORTANT: If no evidence exists for a competency, set rating to "N/A" and evidence_snippets to empty array.
 
 Competencies: ${Object.keys(this.competencyDefinitions).join(', ')}
 
-Evidence: ${evidenceSummary.substring(0, 2000)}
+Evidence: ${evidenceSummary}
 
 Return this exact JSON structure:
 {
@@ -405,6 +723,16 @@ Return this exact JSON structure:
 
 Rating scale: 1-3=Emerging, 4-7=Developing, 8-10=Proficient. Use "N/A" if no evidence exists for that competency. Provide actual excerpts from student work in evidence_snippets.`;
 
+    // Log the full prompt being sent to the LLM
+    console.log(`🤖 FULL LLM PROMPT FOR ${modelName}:`);
+    console.log(`=====================================`);
+    console.log(`SYSTEM: You are an expert educational assessor specializing in competency-based evaluation for high school STEAM education. Always provide complete, valid JSON responses.`);
+    console.log(`\nUSER PROMPT (${prompt.length} characters):`);
+    console.log(prompt);
+    console.log(`=====================================`);
+
+    console.log(`🚀 Sending request to ${modelName} with ${prompt.length} character prompt and 75k token limit`);
+    
     const response = await fetch(this.baseUrl, {
       method: 'POST',
       headers: {
@@ -426,7 +754,7 @@ Rating scale: 1-3=Emerging, 4-7=Developing, 8-10=Proficient. Use "N/A" if no evi
           }
         ],
         temperature: 0.3,
-        max_tokens: 4000
+        max_tokens: 75000  // Ultra-high limit to ensure complete competency analyses
       })
     });
 
@@ -435,43 +763,201 @@ Rating scale: 1-3=Emerging, 4-7=Developing, 8-10=Proficient. Use "N/A" if no evi
     }
 
     const data = await response.json();
+    // Calculate API costs
+    const usage = data.usage || {};
+    const inputTokens = usage.prompt_tokens || 0;
+    const outputTokens = usage.completion_tokens || 0;
+    
+    let inputCost = 0;
+    let outputCost = 0;
+    
+    if (modelName.includes('claude') || modelName.includes('anthropic')) {
+      // Claude Sonnet 4: $3/M input, $15/M output
+      inputCost = (inputTokens / 1000000) * 3;
+      outputCost = (outputTokens / 1000000) * 15;
+    } else if (modelName.includes('gemini') || modelName.includes('google')) {
+      // Gemini 2.5 Flash: $0.30/M input, $2.50/M output  
+      inputCost = (inputTokens / 1000000) * 0.30;
+      outputCost = (outputTokens / 1000000) * 2.50;
+    }
+    
+    const totalCost = inputCost + outputCost;
+    
+    console.log(`📥 Response metadata from ${modelName}:`, {
+      usage: data.usage,
+      finishReason: data.choices[0].finish_reason,
+      responseLength: data.choices[0].message.content.length,
+      inputTokens: inputTokens.toLocaleString(),
+      outputTokens: outputTokens.toLocaleString(),
+      cost: `$${totalCost.toFixed(4)} (in: $${inputCost.toFixed(4)}, out: $${outputCost.toFixed(4)})`
+    });
+    
+    // Store cost data for later use
+    const costData = {
+      modelName,
+      inputTokens,
+      outputTokens,
+      inputCost,
+      outputCost,
+      totalCost
+    };
+    
     let analysisText = data.choices[0].message.content;
     
-    // Clean up the response - remove any text before the JSON
-    const jsonStart = analysisText.indexOf('{');
+    // Clean up the response - remove markdown code blocks and find JSON
+    // Handle patterns like: ```json\n{...}\n``` or ```\n{...}\n```
+    let cleanedText = analysisText;
+    
+    // Remove opening markdown blocks
+    cleanedText = cleanedText.replace(/^```(?:json)?\s*\n?/, '');
+    
+    // Remove closing markdown blocks  
+    cleanedText = cleanedText.replace(/\n?\s*```\s*$/, '');
+    
+    // Find the actual JSON start
+    const jsonStart = cleanedText.indexOf('{');
     if (jsonStart > 0) {
-      analysisText = analysisText.substring(jsonStart);
+      cleanedText = cleanedText.substring(jsonStart);
+    }
+    
+    // Find the actual JSON end and remove any trailing text after the last }
+    const jsonEnd = cleanedText.lastIndexOf('}');
+    if (jsonEnd > 0 && jsonEnd < cleanedText.length - 1) {
+      cleanedText = cleanedText.substring(0, jsonEnd + 1);
     }
     
     // Remove control characters that cause JSON parsing errors
-    analysisText = analysisText.replace(/[\x00-\x1F\x7F-\x9F]/g, '');
+    analysisText = cleanedText.replace(/[\x00-\x1F\x7F-\x9F]/g, '');
     
-    // Try to fix incomplete JSON by finding the last complete object
-    if (!analysisText.trim().endsWith('}')) {
-      console.warn(`AI response appears truncated for ${modelName}, attempting to fix...`);
-      const lastCompleteObject = analysisText.lastIndexOf('}');
-      if (lastCompleteObject > 0) {
-        analysisText = analysisText.substring(0, lastCompleteObject + 1);
+    console.log(`🧹 Cleaned response from ${modelName}: ${analysisText.length} chars (was ${data.choices[0].message.content.length})`);
+    console.log(`🔍 Response starts: "${analysisText.substring(0, 100)}"`);
+    console.log(`🔚 Response ends: "${analysisText.slice(-100)}"`);  
+    
+    // Handle truncated responses more intelligently
+    const responseEndsCorrectly = analysisText.trim().endsWith('}') || analysisText.trim().endsWith(']}');
+    if (!responseEndsCorrectly || analysisText.length < 5000) {
+      console.warn(`⚠️ AI response appears truncated for ${modelName} (${analysisText.length} chars), attempting to fix...`);
+      console.log(`📏 Response length: ${analysisText.length} characters`);
+      console.log(`🔚 Response ending: "${analysisText.slice(-100)}"`); // Show last 100 chars
+      
+      // Try to find the last complete competency object
+      const competencyPattern = /"id":\s*"[^"]+"/g;
+      const competencies = [...analysisText.matchAll(competencyPattern)];
+      console.log(`🔍 Found ${competencies.length} competency objects in truncated response`);
+      
+      if (competencies.length >= 6) { // If we have at least 6 competencies, try to repair
+        console.log(`🔧 Attempting conservative JSON repair with ${competencies.length} competencies`);
+        
+        // Try to find the last complete competency without being too aggressive
+        let repairedText = analysisText;
+        
+        // Step 1: Clean up common truncation artifacts
+        repairedText = repairedText.replace(/[,\s]*$/, ''); // Remove trailing commas/whitespace
+        repairedText = repairedText.replace(/,\s*[\{\[][\s\S]*$/, ''); // Remove incomplete trailing objects
+        
+        // Step 2: Check if we have a complete competencies array
+        const competenciesStart = repairedText.indexOf('"competencies":');
+        if (competenciesStart >= 0) {
+          const arrayStart = repairedText.indexOf('[', competenciesStart);
+          if (arrayStart >= 0) {
+            // Count complete competency objects from the array start
+            let completeCompetencies = 0;
+            let braceCount = 0;
+            let inCompetency = false;
+            
+            for (let i = arrayStart; i < repairedText.length; i++) {
+              if (repairedText[i] === '{') {
+                braceCount++;
+                inCompetency = true;
+              } else if (repairedText[i] === '}') {
+                braceCount--;
+                if (inCompetency && braceCount === 0) {
+                  completeCompetencies++;
+                  inCompetency = false;
+                }
+              }
+            }
+            
+            console.log(`🔍 Found ${completeCompetencies} complete competency objects in response`);
+            
+            // If we have most competencies, try minimal repair
+            if (completeCompetencies >= 6) {
+              // Only add missing closing brackets without truncating content
+              const openBraces = (repairedText.match(/\[/g) || []).length;
+              const closeBraces = (repairedText.match(/\]/g) || []).length;
+              const openCurlies = (repairedText.match(/\{/g) || []).length;
+              const closeCurlies = (repairedText.match(/\}/g) || []).length;
+              
+              // Close arrays first
+              if (openBraces > closeBraces) {
+                repairedText += '\n  ]';
+              }
+              
+              // Add minimal overall_assessment if missing and we're missing the closing structure
+              if (!repairedText.includes('"overall_assessment"') && openCurlies > closeCurlies) {
+                repairedText += ',\n  "overall_assessment": "Comprehensive analysis completed",';
+                repairedText += '\n  "growth_highlights": ["Evidence-based assessment"],';
+                repairedText += '\n  "next_steps": ["Continue skill development"]';
+              }
+              
+              // Close main object
+              if (openCurlies > closeCurlies) {
+                repairedText += '\n}';
+              }
+              
+              analysisText = repairedText;
+              console.log(`✅ Conservative JSON repair completed for ${modelName} (${analysisText.length} chars preserved)`);
+            }
+          }
+        }
+      } else {
+        console.warn(`❌ Too few competencies found (${competencies.length}) in truncated response from ${modelName}`);
       }
     }
+    
+    // Debug: Log JSON structure before parsing
+    console.log(`🔍 About to parse JSON for ${modelName} (${analysisText.length} chars)`);
+    console.log(`📋 JSON structure check:`, {
+      startsWithBrace: analysisText.trim().startsWith('{'),
+      endsWithBrace: analysisText.trim().endsWith('}'),
+      hasCompetencies: analysisText.includes('"competencies"'),
+      openBraces: (analysisText.match(/\{/g) || []).length,
+      closeBraces: (analysisText.match(/\}/g) || []).length,
+      openSquare: (analysisText.match(/\[/g) || []).length,
+      closeSquare: (analysisText.match(/\]/g) || []).length
+    });
     
     try {
       const analysis = JSON.parse(analysisText);
       
-      // Validate that we have all required competencies
-      if (!analysis.competencies || analysis.competencies.length < 8) {
-        console.warn(`Incomplete competency analysis from ${modelName} - using fallback`);
-        return this.generateFallbackAnalysis(studentId, evidence);
-      }
+          // Validate that we have all required competencies
+    if (!analysis.competencies || analysis.competencies.length < 8) {
+      console.warn(`❌ Incomplete competency analysis from ${modelName} - only ${analysis.competencies?.length || 0}/8 competencies found`);
+      console.warn(`🔄 Switching to fallback analysis to ensure full assessment`);
+      return this.generateFallbackAnalysis(studentId, evidence);
+    }
       
-      // Mark which model generated this analysis
+      // Mark which model generated this analysis and include cost data
       analysis.generatingModel = modelName;
+      analysis.apiCost = costData;
       return analysis;
     } catch (parseError) {
       console.error(`Error parsing AI response from ${modelName}:`, parseError);
       console.error(`Raw AI response (first 1000 chars):`, analysisText.substring(0, 1000));
       
+      // Enhanced debug: Show context around the error position if available
+      if (parseError.message.includes('position')) {
+        const position = parseInt(parseError.message.match(/position (\d+)/)?.[1]);
+        if (position) {
+          const start = Math.max(0, position - 100);
+          const end = Math.min(analysisText.length, position + 100);
+          console.error(`🔍 Context around error position ${position}:`, analysisText.substring(start, end));
+          console.error(`🎯 Error character: "${analysisText[position] || 'EOF'}"`);
+        }
+      }
+      
       // Use fallback analysis if parsing fails
+      console.error(`Generating fallback competency analysis for ${modelName}`);
       return this.generateFallbackAnalysis(studentId, evidence);
     }
   }
@@ -553,6 +1039,19 @@ Rating scale: 1-3=Emerging, 4-7=Developing, 8-10=Proficient. Use "N/A" if no evi
     merged.growth_highlights = primaryAnalysis.growth_highlights;
     merged.next_steps = primaryAnalysis.next_steps;
     
+    // Aggregate API costs from both models
+    const primaryCost = primaryAnalysis.apiCost || { totalCost: 0, inputTokens: 0, outputTokens: 0 };
+    const secondaryCost = secondaryAnalysis.apiCost || { totalCost: 0, inputTokens: 0, outputTokens: 0 };
+    
+    merged.totalApiCost = {
+      primary: primaryCost,
+      secondary: secondaryCost,
+      totalCost: primaryCost.totalCost + secondaryCost.totalCost,
+      totalInputTokens: primaryCost.inputTokens + secondaryCost.inputTokens,
+      totalOutputTokens: primaryCost.outputTokens + secondaryCost.outputTokens,
+      costBreakdown: `$${(primaryCost.totalCost + secondaryCost.totalCost).toFixed(4)} (${primaryCost.modelName || 'Primary'}: $${primaryCost.totalCost.toFixed(4)}, ${secondaryCost.modelName || 'Secondary'}: $${secondaryCost.totalCost.toFixed(4)})`
+    };
+    
     return merged;
   }
 
@@ -577,14 +1076,17 @@ Rating scale: 1-3=Emerging, 4-7=Developing, 8-10=Proficient. Use "N/A" if no evi
       evidence: [
         `${evidence.skillsUnlocked.length} skills unlocked`,
         `${evidence.artifacts.length} artifacts submitted`,
-        `${evidence.chatInteractions.length} AI interactions recorded`
+        `${evidence.chatInteractions.length} AI interactions recorded`,
+        `${evidence.galleryProjects.length} gallery projects submitted`,
+        `${evidence.galleryInteractions.length} gallery interactions`,
+        `${evidence.achievements.length} achievements earned`
       ],
       evidence_snippets: [],
       areas_for_improvement: [
         'Continue building evidence through skill completion',
         'Engage more deeply with reflection activities'
       ],
-      narrative: `Basic analysis based on ${evidence.skillsUnlocked.length} skills unlocked and ${evidence.artifacts.length} artifacts. More detailed assessment requires AI analysis.`,
+      narrative: `Basic analysis based on ${evidence.skillsUnlocked.length} skills unlocked, ${evidence.artifacts.length} artifacts, ${evidence.galleryProjects.length} gallery projects, and ${evidence.achievements.length} achievements. More detailed assessment requires AI analysis.`,
       trend: 'stable'
     }));
 
@@ -592,7 +1094,7 @@ Rating scale: 1-3=Emerging, 4-7=Developing, 8-10=Proficient. Use "N/A" if no evi
       studentId,
       analysisDate: new Date().toISOString(),
       competencies,
-      overall_assessment: `Student has completed ${evidence.skillsUnlocked.length} skills and submitted ${evidence.artifacts.length} artifacts. This is a basic analysis - AI analysis temporarily unavailable.`,
+      overall_assessment: `Student has completed ${evidence.skillsUnlocked.length} skills, submitted ${evidence.artifacts.length} artifacts, created ${evidence.galleryProjects.length} gallery projects, and earned ${evidence.achievements.length} achievements. This is a basic analysis - AI analysis temporarily unavailable.`,
       growth_highlights: [
         'Active skill progression',
         'Consistent artifact submission'
@@ -605,9 +1107,20 @@ Rating scale: 1-3=Emerging, 4-7=Developing, 8-10=Proficient. Use "N/A" if no evi
         artifacts: evidence.artifacts.length,
         reflections: evidence.reflections.length,
         chatInteractions: evidence.chatInteractions.length,
-        skillsUnlocked: evidence.skillsUnlocked.length
+        skillsUnlocked: evidence.skillsUnlocked.length,
+        galleryProjects: evidence.galleryProjects.length,
+        galleryInteractions: evidence.galleryInteractions.length,
+        achievements: evidence.achievements.length
       },
-      fallbackAnalysis: true
+      fallbackAnalysis: true,
+      totalApiCost: {
+        primary: { totalCost: 0, inputTokens: 0, outputTokens: 0, modelName: 'N/A' },
+        secondary: { totalCost: 0, inputTokens: 0, outputTokens: 0, modelName: 'N/A' },
+        totalCost: 0,
+        totalInputTokens: 0,
+        totalOutputTokens: 0,
+        costBreakdown: '$0.0000 (Fallback analysis - no API calls)'
+      }
     };
   }
 
@@ -651,66 +1164,213 @@ Rating scale: 1-3=Emerging, 4-7=Developing, 8-10=Proficient. Use "N/A" if no evi
     return anonymized;
   }
 
-  // Prepare evidence summary for AI analysis (with privacy protection)
-  prepareEvidenceSummary(evidence, studentId) {
-    let summary = '';
+  // Estimate tokens more accurately than simple character division
+  estimateTokens(text) {
+    // More accurate token estimation based on:
+    // - Average English word = ~1.3 tokens
+    // - Punctuation and spacing = additional tokens
+    // - Technical terms and code = often more tokens
+    const words = text.split(/\s+/).length;
+    const specialChars = (text.match(/[^\w\s]/g) || []).length;
+    const codeBlocks = (text.match(/```[\s\S]*?```/g) || []).length;
+    
+    return Math.ceil(words * 1.4 + specialChars * 0.3 + codeBlocks * 50);
+  }
 
-    // Skills and Evidence
-    summary += `\n=== SKILLS UNLOCKED (${evidence.skillsUnlocked.length}) ===\n`;
-    evidence.skillsUnlocked.forEach(skill => {
-      summary += `Skill: ${skill.skillId}\n`;
-      if (skill.evidence.reflection) {
-        summary += `Reflection: ${this.anonymizeText(skill.evidence.reflection, studentId)}\n`;
-      }
-      summary += `Unlocked: ${new Date(skill.unlockedAt).toLocaleDateString()}\n\n`;
-    });
-
-    // Artifacts
-    summary += `\n=== ARTIFACTS (${evidence.artifacts.length}) ===\n`;
-    evidence.artifacts.forEach(artifact => {
-      summary += `Type: ${artifact.type} (${artifact.skillId})\n`;
-      const content = artifact.content.substring(0, 500) + (artifact.content.length > 500 ? '...' : '');
-      summary += `Content: ${this.anonymizeText(content, studentId)}\n`;
-      summary += `Date: ${new Date(artifact.timestamp).toLocaleDateString()}\n\n`;
-    });
-
-    // Reflections
-    summary += `\n=== REFLECTIONS (${evidence.reflections.length}) ===\n`;
-    evidence.reflections.forEach(reflection => {
-      if (reflection.type === 'daily_reflection') {
-        summary += `Daily Reflection - Day ${reflection.dayNumber}\n`;
-        
-        // Add each response dynamically
-        Object.values(reflection.responses).forEach(response => {
-          summary += `${response.question}: ${this.anonymizeText(response.answer, studentId)}\n`;
-        });
-        
-        summary += `Date: ${new Date(reflection.timestamp).toLocaleDateString()}\n\n`;
+  // Create optimized evidence summary that fits within LLM token limits
+  createOptimizedEvidenceSummary(evidence, studentId, modelName = 'claude', maxTokens = null) {
+    // Set model-specific token limits (leaving headroom for system prompt)
+    if (!maxTokens) {
+      if (modelName.includes('claude') || modelName.includes('sonnet')) {
+        maxTokens = 180000; // 90% of Claude's 200k limit
+      } else if (modelName.includes('gemini') || modelName.includes('google')) {
+        maxTokens = 900000; // 90% of Gemini's 1M limit  
       } else {
-        summary += `Skill: ${reflection.skillId}\n`;
-        summary += `Reflection: ${this.anonymizeText(reflection.content, studentId)}\n`;
-        summary += `Date: ${new Date(reflection.timestamp).toLocaleDateString()}\n\n`;
+        maxTokens = 50000; // Conservative fallback for unknown models
       }
+    }
+    console.log(`🎯 Creating evidence summary for ${modelName} - Student: ${studentId} (${maxTokens.toLocaleString()} token limit)`);
+    console.log(`📋 Evidence counts:`, {
+      skillsUnlocked: evidence.skillsUnlocked.length,
+      artifacts: evidence.artifacts.length,
+      reflections: evidence.reflections.length,
+      chatInteractions: evidence.chatInteractions.length,
+      galleryProjects: evidence.galleryProjects.length,
+      galleryInteractions: evidence.galleryInteractions.length,
+      achievements: evidence.achievements.length
     });
-
-    // Chat Interactions (sample recent ones)
-    summary += `\n=== AI CHAT INTERACTIONS (${evidence.chatInteractions.length} conversations) ===\n`;
-    const recentChats = evidence.chatInteractions.slice(0, 3); // Last 3 conversations
-    recentChats.forEach(chat => {
-      summary += `Persona: ${chat.persona}\n`;
-      summary += `Date: ${new Date(chat.createdAt?.toDate?.() || chat.createdAt).toLocaleDateString()}\n`;
-      
-      // Sample of student messages (anonymized)
-      const studentMessages = chat.messages.filter(msg => msg.isUser).slice(-5); // Last 5 student messages
-      summary += `Student messages:\n`;
-      studentMessages.forEach(msg => {
-        const content = msg.content.substring(0, 200) + (msg.content.length > 200 ? '...' : '');
-        summary += `- ${this.anonymizeText(content, studentId)}\n`;
+    
+    const sections = [];
+    
+    // 1. Skills and Evidence (High Priority)
+    if (evidence.skillsUnlocked.length > 0) {
+      let skillsSection = `\n=== SKILLS UNLOCKED (${evidence.skillsUnlocked.length}) ===\n`;
+      evidence.skillsUnlocked.forEach(skill => {
+        skillsSection += `Skill: ${skill.skillId}\n`;
+        skillsSection += `XP Earned: ${skill.xpEarned || 0}\n`;
+        if (skill.evidence.reflection && skill.evidence.reflection.trim()) {
+          const reflection = this.anonymizeText(skill.evidence.reflection, studentId);
+          skillsSection += `Reflection: ${reflection}\n`; // Include full reflection
+        }
+        if (skill.evidence.questionAnswers && Array.isArray(skill.evidence.questionAnswers)) {
+          skillsSection += `Answers:\n`;
+          skill.evidence.questionAnswers.forEach((answer, i) => {
+            skillsSection += `  Q${i + 1}: ${this.anonymizeText(answer, studentId)}\n`; // Include full answers
+          });
+        }
+        skillsSection += `Unlocked: ${new Date(skill.unlockedAt).toLocaleDateString()}\n\n`;
       });
-      summary += '\n';
+      sections.push({ priority: 1, content: skillsSection, tokens: this.estimateTokens(skillsSection) });
+    }
+
+    // 2. Daily Reflections (High Priority) 
+    const dailyReflections = evidence.reflections.filter(r => r.type === 'daily_reflection');
+    if (dailyReflections.length > 0) {
+      let reflectionsSection = `\n=== DAILY REFLECTIONS (${dailyReflections.length}) ===\n`;
+      dailyReflections.forEach(reflection => {
+        reflectionsSection += `\nDay ${reflection.dayNumber} Reflection (${new Date(reflection.timestamp).toLocaleDateString()}):\n`;
+        Object.values(reflection.responses).forEach(response => {
+          const answer = this.anonymizeText(response.answer, studentId);
+          reflectionsSection += `Q: ${response.question}\n`;
+          reflectionsSection += `A: ${answer}\n\n`;
+        });
+      });
+      sections.push({ priority: 1, content: reflectionsSection, tokens: this.estimateTokens(reflectionsSection) });
+    }
+
+    // 3. Artifacts (Medium Priority)
+    if (evidence.artifacts.length > 0) {
+      let artifactsSection = `\n=== ARTIFACTS (${evidence.artifacts.length}) ===\n`;
+      evidence.artifacts.forEach(artifact => { // Include ALL artifacts
+        artifactsSection += `\nArtifact: ${artifact.type} (${artifact.skillId})\n`;
+        artifactsSection += `Date: ${new Date(artifact.timestamp).toLocaleDateString()}\n`;
+        const content = this.anonymizeText(artifact.content, studentId);
+        artifactsSection += `Content:\n${content}\n\n`;
+      });
+      sections.push({ priority: 2, content: artifactsSection, tokens: this.estimateTokens(artifactsSection) });
+    }
+
+    // 4. Chat Interactions (Medium Priority)
+    if (evidence.chatInteractions.length > 0) {
+      let chatSection = `\n=== AI CHAT INTERACTIONS (${evidence.chatInteractions.length} conversations) ===\n`;
+      evidence.chatInteractions.forEach(chat => { // Include ALL conversations
+        chatSection += `\nConversation with ${chat.persona} (${new Date(chat.createdAt?.toDate?.() || chat.createdAt).toLocaleDateString()}):\n`;
+        const studentMessages = chat.messages.filter(msg => msg.isUser);
+        studentMessages.forEach((msg, index) => {
+          const content = this.anonymizeText(msg.content, studentId);
+          chatSection += `Student Message ${index + 1}: ${content}\n`;
+        });
+        chatSection += `Total student messages: ${studentMessages.length}\n\n`;
+      });
+      sections.push({ priority: 2, content: chatSection, tokens: this.estimateTokens(chatSection) });
+    }
+
+    // 5. Gallery Projects (Medium Priority)
+    if (evidence.galleryProjects.length > 0) {
+      let gallerySection = `\n=== GALLERY PROJECTS (${evidence.galleryProjects.length}) ===\n`;
+      evidence.galleryProjects.forEach(project => {
+        gallerySection += `\nProject: ${project.title}\n`;
+        gallerySection += `Team: ${project.teamName}\n`;
+        gallerySection += `Website URL: ${project.websiteUrl}\n`;
+        const desc = this.anonymizeText(project.description, studentId);
+        gallerySection += `Description: ${desc}\n`; // Include full description
+        gallerySection += `Technologies: ${project.technologies.join(', ')}\n`;
+        gallerySection += `Views: ${project.metrics.views || 0} | Likes: ${project.metrics.likes || 0}\n`;
+        gallerySection += `Created: ${new Date(project.createdAt?.toDate?.() || project.createdAt).toLocaleDateString()}\n\n`;
+      });
+      sections.push({ priority: 2, content: gallerySection, tokens: this.estimateTokens(gallerySection) });
+    }
+
+    // 6. Gallery Interactions & Achievements (Lower Priority)
+    if (evidence.galleryInteractions.length > 0 || evidence.achievements.length > 0) {
+      let miscSection = '';
+      
+      if (evidence.galleryInteractions.length > 0) {
+        miscSection += `\n=== GALLERY INTERACTIONS (${evidence.galleryInteractions.length}) ===\n`;
+        evidence.galleryInteractions.forEach(interaction => { // Include ALL interactions
+          miscSection += `\n${interaction.type} on ${interaction.galleryId}\n`;
+          miscSection += `Date: ${new Date(interaction.createdAt?.toDate?.() || interaction.createdAt).toLocaleDateString()}\n`;
+          if (interaction.content) {
+            const content = this.anonymizeText(interaction.content, studentId);
+            miscSection += `Content: ${content}\n`; // Include full content
+          }
+          if (interaction.reaction) {
+            miscSection += `Reaction: ${interaction.reaction}\n`;
+          }
+          miscSection += '\n';
+        });
+      }
+      
+      if (evidence.achievements.length > 0) {
+        miscSection += `\n=== ACHIEVEMENTS (${evidence.achievements.length}) ===\n`;
+        evidence.achievements.forEach(achievement => { // Include ALL achievements
+          miscSection += `\n${achievement.title}\n`;
+          miscSection += `Description: ${achievement.description}\n`; // Include full description
+          miscSection += `XP Reward: ${achievement.xpReward}\n`;
+          miscSection += `Earned: ${new Date(achievement.earnedAt?.toDate?.() || achievement.earnedAt).toLocaleDateString()}\n\n`;
+        });
+      }
+      
+      if (miscSection) {
+        sections.push({ priority: 3, content: miscSection, tokens: this.estimateTokens(miscSection) });
+      }
+    }
+
+    // 7. Progress Metrics (Always include, low token cost)
+    let metricsSection = `\n=== PROGRESS METRICS ===\n`;
+    metricsSection += `Total XP: ${evidence.progressMetrics.totalXP} | Level: ${evidence.progressMetrics.currentLevel}\n`;
+    metricsSection += `Website Power: ${evidence.progressMetrics.websitePower} | Profile: ${evidence.progressMetrics.developerProfile || 'None'}\n`;
+    sections.push({ priority: 1, content: metricsSection, tokens: this.estimateTokens(metricsSection) });
+
+    // Build final summary within token limits
+    let summary = '';
+    let totalTokens = 0;
+    
+    // Add sections by priority until we hit token limit
+    const sortedSections = sections.sort((a, b) => a.priority - b.priority);
+    
+    for (const section of sortedSections) {
+      if (totalTokens + section.tokens <= maxTokens) {
+        summary += section.content;
+        totalTokens += section.tokens;
+      } else {
+        console.warn(`⚠️ Skipping section due to token limit (${section.tokens} tokens would exceed ${maxTokens} limit)`);
+      }
+    }
+
+    console.log(`📊 Optimized summary results:`, {
+      finalLength: summary.length,
+      estimatedTokens: Math.round(totalTokens),
+      sectionsIncluded: sortedSections.filter(s => summary.includes(s.content.substring(0, 50))).length,
+      sectionsTotal: sortedSections.length,
+      tokenLimit: maxTokens,
+      utilizationPct: Math.round((totalTokens / maxTokens) * 100)
     });
 
+    // Log the full evidence summary for debugging
+    console.log(`📤 FULL LLM EVIDENCE SUMMARY (${summary.length} characters):`);
+    console.log(`=====================================`);
+    console.log(summary);
+    console.log(`=====================================`);
+    
     return summary;
+  }
+
+  // Prepare evidence summary for AI analysis (with privacy protection)
+  prepareEvidenceSummary(evidence, studentId, modelName = 'claude') {
+    console.log(`🔤 Preparing evidence summary for ${modelName} - Student: ${studentId}`);
+    console.log(`📋 Evidence counts:`, {
+      skillsUnlocked: evidence.skillsUnlocked.length,
+      artifacts: evidence.artifacts.length,
+      reflections: evidence.reflections.length,
+      chatInteractions: evidence.chatInteractions.length,
+      galleryProjects: evidence.galleryProjects.length,
+      galleryInteractions: evidence.galleryInteractions.length,
+      achievements: evidence.achievements.length
+    });
+    
+    // Always use optimized summary with model-specific token limits
+    return this.createOptimizedEvidenceSummary(evidence, studentId, modelName);
   }
 
   // Get competency analysis for a student (now uses dual model by default)
@@ -724,7 +1384,10 @@ Rating scale: 1-3=Emerging, 4-7=Developing, 8-10=Proficient. Use "N/A" if no evi
         artifacts: evidence.artifacts.length,
         reflections: evidence.reflections.length,
         chatInteractions: evidence.chatInteractions.length,
-        skillsUnlocked: evidence.skillsUnlocked.length
+        skillsUnlocked: evidence.skillsUnlocked.length,
+        galleryProjects: evidence.galleryProjects.length,
+        galleryInteractions: evidence.galleryInteractions.length,
+        achievements: evidence.achievements.length
       });
 
       // Debug: Log sample chat interactions
@@ -754,7 +1417,9 @@ Rating scale: 1-3=Emerging, 4-7=Developing, 8-10=Proficient. Use "N/A" if no evi
     console.log(`🔍 Extracting evidence snippets from:`, {
       reflections: evidence.reflections.length,
       artifacts: evidence.artifacts.length,
-      chatInteractions: evidence.chatInteractions.length
+      chatInteractions: evidence.chatInteractions.length,
+      galleryProjects: evidence.galleryProjects.length,
+      galleryInteractions: evidence.galleryInteractions.length
     });
     
     // Extract from reflections
@@ -797,10 +1462,44 @@ Rating scale: 1-3=Emerging, 4-7=Developing, 8-10=Proficient. Use "N/A" if no evi
       });
     });
 
-    // Sort by timestamp (newest first) and limit to 10 most recent
+    // Extract from gallery projects (teamwork, problem-solving evidence)
+    evidence.galleryProjects.forEach((project, index) => {
+      if (project.description && project.description.length > 20) {
+        snippets.push({
+          type: 'Gallery Project',
+          skillId: `${project.title} (Team: ${project.teamName})`,
+          excerpt: project.description.substring(0, 150) + (project.description.length > 150 ? '...' : ''),
+          timestamp: project.createdAt
+        });
+      }
+    });
+
+    // Extract from gallery interactions (communication evidence)
+    evidence.galleryInteractions.forEach((interaction, index) => {
+      if (interaction.content && interaction.content.length > 20) {
+        snippets.push({
+          type: 'Gallery Comment',
+          skillId: `Comment on project`,
+          excerpt: interaction.content.substring(0, 150) + (interaction.content.length > 150 ? '...' : ''),
+          timestamp: interaction.createdAt
+        });
+      }
+    });
+
+    // Extract from achievements (milestone evidence)
+    evidence.achievements.forEach((achievement, index) => {
+      snippets.push({
+        type: 'Achievement',
+        skillId: achievement.title,
+        excerpt: achievement.description,
+        timestamp: achievement.earnedAt
+      });
+    });
+
+    // Sort by timestamp (newest first) and limit to 15 most recent (increased from 10)
     const sortedSnippets = snippets
       .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
-      .slice(0, 10);
+      .slice(0, 15);
 
     console.log(`📝 Generated ${sortedSnippets.length} evidence snippets:`, 
       sortedSnippets.map(s => ({ type: s.type, excerpt: s.excerpt.substring(0, 50) + '...' }))

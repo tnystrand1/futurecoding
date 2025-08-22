@@ -25,11 +25,38 @@ const EnhancedMessageComposer = ({ onSendMessage }) => {
 
     setIsSending(true);
     try {
-      // Combine all attachments
+      // Combine all attachments with enhanced validation
       const allAttachments = [
-        ...uploadedImages.map(img => ({ ...img, type: 'image' })),
-        ...uploadedCodeFiles.map(file => ({ ...file, type: 'code' }))
+        ...uploadedImages.map(img => {
+          // Only include serializable properties for images
+          return {
+            id: String(img.id || Date.now()),
+            type: 'image',
+            name: String(img.name || 'image.png'),
+            size: Number(img.size || 0),
+            dataUrl: String(img.dataUrl || '')
+          };
+        }),
+        ...uploadedCodeFiles.map(file => {
+          // Only include serializable properties for code files
+          return {
+            id: String(file.id || Date.now()),
+            type: 'code',
+            name: String(file.name || 'code.txt'),
+            size: Number(file.size || 0),
+            content: String(file.content || ''),
+            language: String(file.language || 'text')
+          };
+        })
       ];
+
+      // Validate attachments before sending
+      console.log('Sending message with attachments:', allAttachments.map(att => ({
+        type: att.type,
+        name: att.name,
+        hasDataUrl: att.type === 'image' ? !!att.dataUrl : undefined,
+        hasContent: att.type === 'code' ? !!att.content : undefined
+      })));
 
       await onSendMessage(message.trim(), allAttachments);
       setMessage('');
@@ -48,7 +75,15 @@ const EnhancedMessageComposer = ({ onSendMessage }) => {
         imageCount: uploadedImages.length,
         codeFileCount: uploadedCodeFiles.length 
       });
-      alert('Failed to send message. Please try again.');
+      
+      // Show specific error message based on error type
+      if (error.message?.includes('nested entity')) {
+        alert('Failed to send message with attachments. This might be due to large file sizes or corrupted data. Please try with smaller images or without attachments.');
+      } else if (error.message?.includes('permission')) {
+        alert('You do not have permission to send messages in this conversation.');
+      } else {
+        alert('Failed to send message. Please check your internet connection and try again.');
+      }
     } finally {
       setIsSending(false);
     }
@@ -276,7 +311,10 @@ const EnhancedMessageComposer = ({ onSendMessage }) => {
     <div style={{
       padding: '15px 20px',
       borderTop: '1px solid #8B4513',
-      background: 'rgba(139, 69, 19, 0.02)'
+      background: 'rgba(139, 69, 19, 0.02)',
+      maxHeight: '40vh', // Limit composer to 40% of viewport height
+      overflow: 'auto', // Enable scrolling if content exceeds max height
+      flexShrink: 0 // Prevent composer from shrinking
     }}>
       {/* Quick Message Buttons */}
       <div style={{
@@ -402,7 +440,9 @@ const EnhancedMessageComposer = ({ onSendMessage }) => {
           marginBottom: '12px',
           display: 'flex',
           gap: '8px',
-          flexWrap: 'wrap'
+          flexWrap: 'wrap',
+          maxHeight: '120px', // Limit preview height
+          overflowY: 'auto' // Allow scrolling if many images
         }}>
           {uploadedImages.map(image => (
             <div
@@ -473,7 +513,9 @@ const EnhancedMessageComposer = ({ onSendMessage }) => {
           marginBottom: '12px',
           display: 'flex',
           gap: '8px',
-          flexWrap: 'wrap'
+          flexWrap: 'wrap',
+          maxHeight: '150px', // Limit code preview height
+          overflowY: 'auto' // Allow scrolling if many files
         }}>
           {uploadedCodeFiles.map(codeFile => (
             <div

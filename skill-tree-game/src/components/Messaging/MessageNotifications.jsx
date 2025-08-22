@@ -1,29 +1,52 @@
 import React, { useState, useEffect } from 'react';
 import messagingService from '../../services/messagingService';
+import enhancedMessagingService from '../../services/enhancedMessagingService';
 
 const MessageNotifications = ({ studentId, onOpenMessage }) => {
   const [notifications, setNotifications] = useState([]);
   const [lastMessageTimestamp, setLastMessageTimestamp] = useState(null);
+  const [activeNotifications, setActiveNotifications] = useState(new Map()); // Track browser notifications
 
   useEffect(() => {
     if (!studentId) return;
 
-    // Listen for new conversations and messages
-    const unsubscribe = messagingService.listenToStudentConversations(
+    // Listen for new conversations and messages  
+    const unsubscribe = enhancedMessagingService.listenToStudentConversations(
       studentId,
-      (conversations) => {
-        conversations.forEach(conversation => {
+      async (conversations) => {
+        for (const conversation of conversations) {
           const lastMessage = conversation.lastMessage;
           
-          // Check if this is a new message from someone else
+          // Check if this is a new unread message from someone else
           if (lastMessage && 
               lastMessage.senderId !== studentId && 
               (!lastMessageTimestamp || lastMessage.timestamp > lastMessageTimestamp)) {
             
-            showNotification(conversation);
-            setLastMessageTimestamp(lastMessage.timestamp);
+            // Check if there are actually unread messages in this conversation
+            try {
+              const unreadCount = await enhancedMessagingService.getUnreadCount(studentId);
+              if (unreadCount > 0) {
+                // Get unread messages to verify this conversation has unread messages
+                const messages = await enhancedMessagingService.getConversationMessages(conversation.id, 10);
+                const hasUnreadFromOthers = messages.some(msg => 
+                  msg.receiverId === studentId && 
+                  !msg.isRead && 
+                  msg.senderId !== studentId
+                );
+                
+                if (hasUnreadFromOthers) {
+                  showNotification(conversation);
+                  setLastMessageTimestamp(lastMessage.timestamp);
+                }
+              }
+            } catch (error) {
+              console.error('Error checking unread status:', error);
+              // Fallback to showing notification without read check
+              showNotification(conversation);
+              setLastMessageTimestamp(lastMessage.timestamp);
+            }
           }
-        });
+        }
       }
     );
 
@@ -31,6 +54,76 @@ const MessageNotifications = ({ studentId, onOpenMessage }) => {
       unsubscribe();
     };
   }, [studentId, lastMessageTimestamp]);
+
+  // Listen for messages being marked as read to dismiss notifications
+  useEffect(() => {
+    if (!studentId) return;
+
+    const checkAndDismissReadNotifications = async () => {
+      try {
+        const unreadCount = await enhancedMessagingService.getUnreadCount(studentId);
+        
+        // If no unread messages, dismiss all notifications
+        if (unreadCount === 0) {
+          setNotifications([]);
+          // Close all browser notifications
+          activeNotifications.forEach(notification => {
+            notification.close();
+          });
+          setActiveNotifications(new Map());
+        } else {
+          // Check each notification to see if its conversation still has unread messages
+          const updatedNotifications = [];
+          for (const notification of notifications) {
+            try {
+              const messages = await enhancedMessagingService.getConversationMessages(notification.conversationId, 10);
+              const hasUnreadFromOthers = messages.some(msg => 
+                msg.receiverId === studentId && 
+                !msg.isRead && 
+                msg.senderId !== studentId
+              );
+              
+              if (hasUnreadFromOthers) {
+                updatedNotifications.push(notification);
+              } else {
+                // Close browser notification for this conversation
+                const browserNotif = activeNotifications.get(notification.conversationId);
+                if (browserNotif) {
+                  browserNotif.close();
+                  activeNotifications.delete(notification.conversationId);
+                }
+              }
+            } catch (error) {
+              console.error('Error checking conversation read status:', error);
+              // Keep notification on error
+              updatedNotifications.push(notification);
+            }
+          }
+          
+          if (updatedNotifications.length !== notifications.length) {
+            setNotifications(updatedNotifications);
+          }
+        }
+      } catch (error) {
+        console.error('Error checking read notifications:', error);
+      }
+    };
+
+    // Check every 5 seconds for read status changes (less frequent to reduce load)
+    const interval = setInterval(checkAndDismissReadNotifications, 5000);
+
+    return () => clearInterval(interval);
+  }, [studentId, notifications, activeNotifications]);
+
+  // Cleanup browser notifications on unmount
+  useEffect(() => {
+    return () => {
+      // Close all browser notifications when component unmounts
+      activeNotifications.forEach(notification => {
+        notification.close();
+      });
+    };
+  }, [activeNotifications]);
 
   const showNotification = (conversation) => {
     const otherParticipantId = conversation.participants.find(id => id !== studentId);
@@ -54,24 +147,35 @@ const MessageNotifications = ({ studentId, onOpenMessage }) => {
       return [...prev, notification];
     });
 
-    // Auto-remove notification after 6 seconds
-    setTimeout(() => {
-      setNotifications(prev => prev.filter(n => n.id !== notification.id));
-    }, 6000);
-
     // Show browser notification if permission granted
     if (Notification.permission === 'granted') {
+      // Close any existing browser notification for this conversation first
+      const existingBrowserNotif = activeNotifications.get(notification.conversationId);
+      if (existingBrowserNotif) {
+        existingBrowserNotif.close();
+      }
+
       const browserNotification = new Notification(`💬 ${notification.title}`, {
         body: notification.message,
         icon: '/favicon.png',
         badge: '/favicon.png',
-        tag: `message-${notification.conversationId}` // Replace existing notifications from same conversation
+        tag: `message-${notification.conversationId}`, // Replace existing notifications from same conversation
+        requireInteraction: false // Allow auto-close
       });
 
-      // Close browser notification after 4 seconds
-      setTimeout(() => {
+      // Track this browser notification
+      setActiveNotifications(prev => {
+        const newMap = new Map(prev);
+        newMap.set(notification.conversationId, browserNotification);
+        return newMap;
+      });
+
+      // Handle browser notification click
+      browserNotification.onclick = () => {
+        onOpenMessage(notification.conversationId);
+        dismissNotification(notification.id);
         browserNotification.close();
-      }, 4000);
+      };
     } else if (Notification.permission !== 'denied') {
       // Request permission for future notifications
       Notification.requestPermission();
@@ -82,9 +186,33 @@ const MessageNotifications = ({ studentId, onOpenMessage }) => {
     setNotifications(prev => prev.filter(n => n.id !== notificationId));
   };
 
-  const handleNotificationClick = (notification) => {
-    onOpenMessage(notification.conversationId);
-    dismissNotification(notification.id);
+  const handleNotificationClick = async (notification) => {
+    try {
+      // Mark messages as read when notification is clicked
+      await enhancedMessagingService.markMessagesAsRead(notification.conversationId, studentId);
+      
+      // Close and remove browser notification
+      const browserNotif = activeNotifications.get(notification.conversationId);
+      if (browserNotif) {
+        browserNotif.close();
+        setActiveNotifications(prev => {
+          const newMap = new Map(prev);
+          newMap.delete(notification.conversationId);
+          return newMap;
+        });
+      }
+
+      // Open the conversation
+      onOpenMessage(notification.conversationId);
+      
+      // Dismiss the toast notification
+      dismissNotification(notification.id);
+    } catch (error) {
+      console.error('Error handling notification click:', error);
+      // Still open the conversation even if marking as read fails
+      onOpenMessage(notification.conversationId);
+      dismissNotification(notification.id);
+    }
   };
 
   if (notifications.length === 0) {

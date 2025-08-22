@@ -38,6 +38,18 @@
   border-color: #27ae60;
 }
 
+.pending {
+  background: #e1f5fe;
+  border-color: #2196F3;
+  box-shadow: 0 0 10px rgba(33, 150, 243, 0.3);
+}
+
+.rejected {
+  background: #ffebee;
+  border-color: #f44336;
+  box-shadow: 0 0 10px rgba(244, 67, 54, 0.3);
+}
+
 @keyframes pulse {
   0%, 100% { box-shadow: 0 0 10px rgba(243, 156, 18, 0.3); }
   50% { box-shadow: 0 0 20px rgba(243, 156, 18, 0.5); }
@@ -57,4 +69,14 @@
 .tier {
   font-size: 10px;
   color: #7f8c8d;
+}
+
+.status {
+  font-size: 9px;
+  font-weight: bold;
+  margin-top: 2px;
+  padding: 2px 4px;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.1);
+  color: #2c3e50;
 }
