@@ -1,0 +1,65 @@
+student_id,competency_id,competency_name,day,date_start,date_end,claude_score,gemini_score,avg_score,model_agreement,confidence_level,evidence_count,artifacts_count,reflections_count,chat_interactions_count,gallery_projects_count,achievements_count,analysis_timestamp,api_cost_usd
+charles,sense_of_belonging,Sense of Belonging,1,2025-08-11,2025-08-11,NA,NA,NA,95,High,3,1,1,1,0,0,2025-08-22T20:38:24.346Z,0.042516099999999994
+charles,steam_interest,STEAM Interest,1,2025-08-11,2025-08-11,6,8,7,75,Medium,3,1,1,1,0,0,2025-08-22T20:38:24.347Z,0.042516099999999994
+charles,communication,Communication,1,2025-08-11,2025-08-11,4,6,5,75,Medium,3,1,1,1,0,0,2025-08-22T20:38:24.347Z,0.042516099999999994
+charles,teamwork,Teamwork,1,2025-08-11,2025-08-11,NA,NA,NA,95,High,3,1,1,1,0,0,2025-08-22T20:38:24.347Z,0.042516099999999994
+charles,problem_solving,Problem Solving,1,2025-08-11,2025-08-11,7,8,8,95,High,3,1,1,1,0,0,2025-08-22T20:38:24.347Z,0.042516099999999994
+charles,opportunity_recognition,Opportunity Recognition,1,2025-08-11,2025-08-11,5,7,6,75,Medium,3,1,1,1,0,0,2025-08-22T20:38:24.347Z,0.042516099999999994
+charles,steam_agency,STEAM Agency,1,2025-08-11,2025-08-11,6,8,7,75,Medium,3,1,1,1,0,0,2025-08-22T20:38:24.347Z,0.042516099999999994
+charles,continuous_learning,Continuous Learning,1,2025-08-11,2025-08-11,6,7,7,95,High,3,1,1,1,0,0,2025-08-22T20:38:24.347Z,0.042516099999999994
+charles,sense_of_belonging,Sense of Belonging,2,2025-08-12,2025-08-12,8,8,8,95,High,4,1,2,1,0,0,2025-08-22T20:38:56.721Z,0.04486419999999999
+charles,steam_interest,STEAM Interest,2,2025-08-12,2025-08-12,8,9,9,95,High,4,1,2,1,0,0,2025-08-22T20:38:56.721Z,0.04486419999999999
+charles,communication,Communication,2,2025-08-12,2025-08-12,5,6,6,95,High,4,1,2,1,0,0,2025-08-22T20:38:56.721Z,0.04486419999999999
+charles,teamwork,Teamwork,2,2025-08-12,2025-08-12,NA,NA,NA,95,High,4,1,2,1,0,0,2025-08-22T20:38:56.721Z,0.04486419999999999
+charles,problem_solving,Problem Solving,2,2025-08-12,2025-08-12,7,7,7,95,High,4,1,2,1,0,0,2025-08-22T20:38:56.721Z,0.04486419999999999
+charles,opportunity_recognition,Opportunity Recognition,2,2025-08-12,2025-08-12,6,7,7,95,High,4,1,2,1,0,0,2025-08-22T20:38:56.721Z,0.04486419999999999
+charles,steam_agency,STEAM Agency,2,2025-08-12,2025-08-12,7,8,8,95,High,4,1,2,1,0,0,2025-08-22T20:38:56.721Z,0.04486419999999999
+charles,continuous_learning,Continuous Learning,2,2025-08-12,2025-08-12,8,8,8,95,High,4,1,2,1,0,0,2025-08-22T20:38:56.721Z,0.04486419999999999
+charles,sense_of_belonging,Sense of Belonging,3,2025-08-13,2025-08-13,7,8,8,95,High,8,2,5,1,0,0,2025-08-22T20:39:31.670Z,0.049885700000000005
+charles,steam_interest,STEAM Interest,3,2025-08-13,2025-08-13,8,8,8,95,High,8,2,5,1,0,0,2025-08-22T20:39:31.670Z,0.049885700000000005
+charles,communication,Communication,3,2025-08-13,2025-08-13,5,6,6,95,High,8,2,5,1,0,0,2025-08-22T20:39:31.670Z,0.049885700000000005
+charles,teamwork,Teamwork,3,2025-08-13,2025-08-13,6,8,7,75,Medium,8,2,5,1,0,0,2025-08-22T20:39:31.670Z,0.049885700000000005
+charles,problem_solving,Problem Solving,3,2025-08-13,2025-08-13,7,7,7,95,High,8,2,5,1,0,0,2025-08-22T20:39:31.670Z,0.049885700000000005
+charles,opportunity_recognition,Opportunity Recognition,3,2025-08-13,2025-08-13,6,7,7,95,High,8,2,5,1,0,0,2025-08-22T20:39:31.670Z,0.049885700000000005
+charles,steam_agency,STEAM Agency,3,2025-08-13,2025-08-13,7,7,7,95,High,8,2,5,1,0,0,2025-08-22T20:39:31.670Z,0.049885700000000005
+charles,continuous_learning,Continuous Learning,3,2025-08-13,2025-08-13,8,8,8,95,High,8,2,5,1,0,0,2025-08-22T20:39:31.670Z,0.049885700000000005
+charles,sense_of_belonging,Sense of Belonging,4,2025-08-14,2025-08-14,7,8,8,95,High,10,2,7,1,0,0,2025-08-22T20:40:02.733Z,0.0454779
+charles,steam_interest,STEAM Interest,4,2025-08-14,2025-08-14,8,7,8,95,High,10,2,7,1,0,0,2025-08-22T20:40:02.733Z,0.0454779
+charles,communication,Communication,4,2025-08-14,2025-08-14,6,6,6,95,High,10,2,7,1,0,0,2025-08-22T20:40:02.733Z,0.0454779
+charles,teamwork,Teamwork,4,2025-08-14,2025-08-14,7,7,7,95,High,10,2,7,1,0,0,2025-08-22T20:40:02.733Z,0.0454779
+charles,problem_solving,Problem Solving,4,2025-08-14,2025-08-14,6,6,6,95,High,10,2,7,1,0,0,2025-08-22T20:40:02.733Z,0.0454779
+charles,opportunity_recognition,Opportunity Recognition,4,2025-08-14,2025-08-14,5,5,5,95,High,10,2,7,1,0,0,2025-08-22T20:40:02.733Z,0.0454779
+charles,steam_agency,STEAM Agency,4,2025-08-14,2025-08-14,7,6,7,95,High,10,2,7,1,0,0,2025-08-22T20:40:02.733Z,0.0454779
+charles,continuous_learning,Continuous Learning,4,2025-08-14,2025-08-14,8,7,8,95,High,10,2,7,1,0,0,2025-08-22T20:40:02.733Z,0.0454779
+charles,sense_of_belonging,Sense of Belonging,5,2025-08-18,2025-08-18,7,8,8,95,High,10,2,7,1,0,0,2025-08-22T20:40:33.836Z,0.045210400000000005
+charles,steam_interest,STEAM Interest,5,2025-08-18,2025-08-18,8,7,8,95,High,10,2,7,1,0,0,2025-08-22T20:40:33.836Z,0.045210400000000005
+charles,communication,Communication,5,2025-08-18,2025-08-18,6,6,6,95,High,10,2,7,1,0,0,2025-08-22T20:40:33.836Z,0.045210400000000005
+charles,teamwork,Teamwork,5,2025-08-18,2025-08-18,6,8,7,75,Medium,10,2,7,1,0,0,2025-08-22T20:40:33.836Z,0.045210400000000005
+charles,problem_solving,Problem Solving,5,2025-08-18,2025-08-18,7,7,7,95,High,10,2,7,1,0,0,2025-08-22T20:40:33.836Z,0.045210400000000005
+charles,opportunity_recognition,Opportunity Recognition,5,2025-08-18,2025-08-18,6,6,6,95,High,10,2,7,1,0,0,2025-08-22T20:40:33.836Z,0.045210400000000005
+charles,steam_agency,STEAM Agency,5,2025-08-18,2025-08-18,7,7,7,95,High,10,2,7,1,0,0,2025-08-22T20:40:33.836Z,0.045210400000000005
+charles,continuous_learning,Continuous Learning,5,2025-08-18,2025-08-18,8,8,8,95,High,10,2,7,1,0,0,2025-08-22T20:40:33.836Z,0.045210400000000005
+charles,sense_of_belonging,Sense of Belonging,6,2025-08-19,2025-08-19,8,8,8,95,High,12,2,9,1,0,0,2025-08-22T20:41:07.680Z,0.046412
+charles,steam_interest,STEAM Interest,6,2025-08-19,2025-08-19,7,9,8,75,Medium,12,2,9,1,0,0,2025-08-22T20:41:07.680Z,0.046412
+charles,communication,Communication,6,2025-08-19,2025-08-19,5,7,6,75,Medium,12,2,9,1,0,0,2025-08-22T20:41:07.680Z,0.046412
+charles,teamwork,Teamwork,6,2025-08-19,2025-08-19,7,8,8,95,High,12,2,9,1,0,0,2025-08-22T20:41:07.680Z,0.046412
+charles,problem_solving,Problem Solving,6,2025-08-19,2025-08-19,6,7,7,95,High,12,2,9,1,0,0,2025-08-22T20:41:07.680Z,0.046412
+charles,opportunity_recognition,Opportunity Recognition,6,2025-08-19,2025-08-19,6,7,7,95,High,12,2,9,1,0,0,2025-08-22T20:41:07.680Z,0.046412
+charles,steam_agency,STEAM Agency,6,2025-08-19,2025-08-19,7,8,8,95,High,12,2,9,1,0,0,2025-08-22T20:41:07.680Z,0.046412
+charles,continuous_learning,Continuous Learning,6,2025-08-19,2025-08-19,8,8,8,95,High,12,2,9,1,0,0,2025-08-22T20:41:07.680Z,0.046412
+charles,sense_of_belonging,Sense of Belonging,7,2025-08-20,2025-08-20,7,8,8,95,High,12,2,9,1,0,0,2025-08-22T20:41:41.480Z,0.0470245
+charles,steam_interest,STEAM Interest,7,2025-08-20,2025-08-20,8,8,8,95,High,12,2,9,1,0,0,2025-08-22T20:41:41.480Z,0.0470245
+charles,communication,Communication,7,2025-08-20,2025-08-20,6,7,7,95,High,12,2,9,1,0,0,2025-08-22T20:41:41.480Z,0.0470245
+charles,teamwork,Teamwork,7,2025-08-20,2025-08-20,7,8,8,95,High,12,2,9,1,0,0,2025-08-22T20:41:41.480Z,0.0470245
+charles,problem_solving,Problem Solving,7,2025-08-20,2025-08-20,7,7,7,95,High,12,2,9,1,0,0,2025-08-22T20:41:41.480Z,0.0470245
+charles,opportunity_recognition,Opportunity Recognition,7,2025-08-20,2025-08-20,6,7,7,95,High,12,2,9,1,0,0,2025-08-22T20:41:41.480Z,0.0470245
+charles,steam_agency,STEAM Agency,7,2025-08-20,2025-08-20,8,7,8,95,High,12,2,9,1,0,0,2025-08-22T20:41:41.480Z,0.0470245
+charles,continuous_learning,Continuous Learning,7,2025-08-20,2025-08-20,8,8,8,95,High,12,2,9,1,0,0,2025-08-22T20:41:41.480Z,0.0470245
+charles,sense_of_belonging,Sense of Belonging,8,2025-08-21,2025-08-21,8,7,8,95,High,12,2,9,1,0,0,2025-08-22T20:42:13.552Z,0.046571999999999995
+charles,steam_interest,STEAM Interest,8,2025-08-21,2025-08-21,9,8,9,95,High,12,2,9,1,0,0,2025-08-22T20:42:13.552Z,0.046571999999999995
+charles,communication,Communication,8,2025-08-21,2025-08-21,6,6,6,95,High,12,2,9,1,0,0,2025-08-22T20:42:13.552Z,0.046571999999999995
+charles,teamwork,Teamwork,8,2025-08-21,2025-08-21,7,7,7,95,High,12,2,9,1,0,0,2025-08-22T20:42:13.552Z,0.046571999999999995
+charles,problem_solving,Problem Solving,8,2025-08-21,2025-08-21,7,6,7,95,High,12,2,9,1,0,0,2025-08-22T20:42:13.552Z,0.046571999999999995
+charles,opportunity_recognition,Opportunity Recognition,8,2025-08-21,2025-08-21,6,6,6,95,High,12,2,9,1,0,0,2025-08-22T20:42:13.552Z,0.046571999999999995
+charles,steam_agency,STEAM Agency,8,2025-08-21,2025-08-21,8,7,8,95,High,12,2,9,1,0,0,2025-08-22T20:42:13.552Z,0.046571999999999995
+charles,continuous_learning,Continuous Learning,8,2025-08-21,2025-08-21,9,8,9,95,High,12,2,9,1,0,0,2025-08-22T20:42:13.552Z,0.046571999999999995

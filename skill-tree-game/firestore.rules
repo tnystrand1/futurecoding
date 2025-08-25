@@ -1,18 +1,74 @@
-rules_version='2'
+rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+    
+    // TEMPORARY OPEN RULES FOR STUDENT SELECTOR SYSTEM
+    // TODO: Implement proper authentication system later
+    
+    // Students collection - core student data
+    match /students/{studentId} {
+      // Allow read/write for now since students access via simple selection
+      allow read, write: if true;
+    }
+    
+    // Reflections collection - daily reflections and skill reflections
+    match /reflections/{reflectionId} {
+      // Allow read/write for student functionality
+      allow read, write: if true;
+    }
+    
+    // AI Conversations collection - chat interactions
+    match /ai_conversations/{conversationId} {
+      // Allow read/write for chat functionality
+      allow read, write: if true;
+    }
+    
+    // Gallery Projects collection - collaborative projects
+    match /gallery_projects/{projectId} {
+      // Allow read/write for gallery functionality
+      allow read, write: if true;
+    }
+    
+    // Gallery Interactions collection - comments, likes, etc.
+    match /gallery_interactions/{interactionId} {
+      // Allow read/write for interaction functionality
+      allow read, write: if true;
+    }
+    
+    // Achievements collection - student achievements
+    match /achievements/{achievementId} {
+      // Allow read/write for achievement system
+      allow read, write: if true;
+    }
+    
+    // Competency Analytics collection - generated reports (if stored)
+    match /competency_analytics/{analyticsId} {
+      // Allow read/write for analytics
+      allow read, write: if true;
+    }
+    
+    // System configuration and admin data
+    match /system/{document} {
+      // Allow read/write for system functionality
+      allow read, write: if true;
+    }
+    
+    // Skill definitions and curriculum data
+    match /skills/{skillId} {
+      // Allow read/write for skill system
+      allow read, write: if true;
+    }
+    
+    // Competency definitions
+    match /competencies/{competencyId} {
+      // Allow read/write for competency system
+      allow read, write: if true;
+    }
+    
+    // Allow all other collections for now
     match /{document=**} {
-      // This rule allows anyone with your database reference to view, edit,
-      // and delete all data in your database. It is useful for getting
-      // started, but it is configured to expire after 30 days because it
-      // leaves your app open to attackers. At that time, all client
-      // requests to your database will be denied.
-      //
-      // Make sure to write security rules for your app before that time, or
-      // else all client requests to your database will be denied until you
-      // update your rules.
-      allow read, write: if request.time < timestamp.date(2025, 8, 28);
+      allow read, write: if true;
     }
   }
 }

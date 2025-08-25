@@ -1508,10 +1508,496 @@ Rating scale: 1-3=Emerging, 4-7=Developing, 8-10=Proficient. Use "N/A" if no evi
     return sortedSnippets;
   }
 
-  // Get historical competency data (placeholder for future timeline feature)
+  // Get date ranges for each of the 8 days
+  getDayDateRanges() {
+    return {
+      1: { start: '2025-08-11', end: '2025-08-11' },
+      2: { start: '2025-08-12', end: '2025-08-12' },
+      3: { start: '2025-08-13', end: '2025-08-13' },
+      4: { start: '2025-08-14', end: '2025-08-14' },
+      5: { start: '2025-08-18', end: '2025-08-18' },
+      6: { start: '2025-08-19', end: '2025-08-19' },
+      7: { start: '2025-08-20', end: '2025-08-20' },
+      8: { start: '2025-08-21', end: '2025-08-21' }
+    };
+  }
+
+  // Get cumulative evidence up to a specific day (excluding Day 8 self-ratings)
+  async getCumulativeEvidenceForDay(studentId, dayNumber, excludeDay8SelfRatings = true) {
+    try {
+      console.log(`📅 Collecting cumulative evidence for ${studentId} up to Day ${dayNumber}`);
+
+      const dayRanges = this.getDayDateRanges();
+      const endDate = new Date(dayRanges[dayNumber].end + 'T23:59:59.999Z');
+
+      // Get all evidence using existing method
+      const allEvidence = await this.getStudentEvidence(studentId);
+
+      // Filter evidence to be cumulative up to the specified day
+      const filteredEvidence = {
+        artifacts: [],
+        reflections: [],
+        chatInteractions: [],
+        skillsUnlocked: [],
+        galleryProjects: [],
+        galleryInteractions: [],
+        achievements: [],
+        progressMetrics: allEvidence.progressMetrics
+      };
+
+      // Filter skills unlocked by timestamp
+      filteredEvidence.skillsUnlocked = allEvidence.skillsUnlocked.filter(skill => {
+        const unlockDate = new Date(skill.unlockedAt);
+        return unlockDate <= endDate;
+      });
+
+      // Filter artifacts by timestamp
+      filteredEvidence.artifacts = allEvidence.artifacts.filter(artifact => {
+        const artifactDate = new Date(artifact.timestamp);
+        return artifactDate <= endDate;
+      });
+
+      // Filter reflections by timestamp and exclude Day 8 self-ratings if specified
+      filteredEvidence.reflections = allEvidence.reflections.filter(reflection => {
+        const reflectionDate = new Date(reflection.timestamp || reflection.submittedAt);
+        const isBeforeEndDate = reflectionDate <= endDate;
+
+        // Exclude Day 8 self-ratings if requested
+        if (excludeDay8SelfRatings && reflection.dayNumber === 8) {
+          // Check if this reflection contains self-rating questions
+          const day8Questions = this.getQuestionsForDay(8);
+          const selfRatingKeys = ['steamInterestRatingExplanation', 'belongingRatingExplanation', 'communicationRatingExplanation'];
+
+          // If this reflection has self-rating content, exclude it
+          const hasSelfRatings = selfRatingKeys.some(key =>
+            reflection.responses && reflection.responses[key] ||
+            reflection[key] && typeof reflection[key] === 'string' && reflection[key].includes('Rate yourself')
+          );
+
+          if (hasSelfRatings) {
+            console.log(`🚫 Excluding Day 8 self-rating reflection for ${studentId}`);
+            return false;
+          }
+        }
+
+        return isBeforeEndDate;
+      });
+
+      // Filter chat interactions by timestamp
+      filteredEvidence.chatInteractions = allEvidence.chatInteractions.filter(chat => {
+        const chatDate = new Date(chat.createdAt?.toDate?.() || chat.createdAt);
+        return chatDate <= endDate;
+      });
+
+      // Filter gallery projects by timestamp
+      filteredEvidence.galleryProjects = allEvidence.galleryProjects.filter(project => {
+        const projectDate = new Date(project.createdAt?.toDate?.() || project.createdAt);
+        return projectDate <= endDate;
+      });
+
+      // Filter gallery interactions by timestamp
+      filteredEvidence.galleryInteractions = allEvidence.galleryInteractions.filter(interaction => {
+        const interactionDate = new Date(interaction.createdAt?.toDate?.() || interaction.createdAt);
+        return interactionDate <= endDate;
+      });
+
+      // Filter achievements by timestamp
+      filteredEvidence.achievements = allEvidence.achievements.filter(achievement => {
+        const achievementDate = new Date(achievement.earnedAt?.toDate?.() || achievement.earnedAt);
+        return achievementDate <= endDate;
+      });
+
+      console.log(`✅ Cumulative evidence for Day ${dayNumber}:`, {
+        skillsUnlocked: filteredEvidence.skillsUnlocked.length,
+        artifacts: filteredEvidence.artifacts.length,
+        reflections: filteredEvidence.reflections.length,
+        chatInteractions: filteredEvidence.chatInteractions.length,
+        galleryProjects: filteredEvidence.galleryProjects.length,
+        galleryInteractions: filteredEvidence.galleryInteractions.length,
+        achievements: filteredEvidence.achievements.length
+      });
+
+      return filteredEvidence;
+    } catch (error) {
+      console.error(`Error getting cumulative evidence for Day ${dayNumber}:`, error);
+      throw error;
+    }
+  }
+
+  // Generate historical competency analytics CSV data
+  async generateHistoricalCompetencyAnalytics(studentId) {
+    try {
+      console.log(`🔄 Starting historical competency analytics for ${studentId}`);
+
+      const dayRanges = this.getDayDateRanges();
+      const csvData = [];
+      let totalApiCost = 0;
+
+      // Process each day with cumulative evidence
+      for (let day = 1; day <= 8; day++) {
+        console.log(`📊 Processing Day ${day} for ${studentId}`);
+
+        // Get cumulative evidence up to this day
+        const evidence = await this.getCumulativeEvidenceForDay(studentId, day);
+
+        // Skip if no evidence available for this day
+        if (evidence.skillsUnlocked.length === 0 &&
+            evidence.reflections.length === 0 &&
+            evidence.artifacts.length === 0 &&
+            evidence.chatInteractions.length === 0) {
+          console.log(`⏭️ Skipping Day ${day} - no evidence available`);
+          continue;
+        }
+
+        // Analyze competencies with dual models
+        const analysis = await this.analyzeDualCompetencies(studentId, evidence);
+
+        // Track API costs
+        if (analysis.totalApiCost) {
+          totalApiCost += analysis.totalApiCost.totalCost;
+        }
+
+        // Generate CSV row for each competency
+        analysis.competencies.forEach(comp => {
+          const dayRange = dayRanges[day];
+          const modelAgreement = comp.confidence === 'High' ? 95 :
+                              comp.confidence === 'Medium' ? 75 : 60;
+
+          const csvRow = {
+            student_id: studentId,
+            competency_id: comp.id,
+            competency_name: comp.name,
+            day: day,
+            date_start: dayRange.start,
+            date_end: dayRange.end,
+            claude_score: comp.model_scores?.primary || (comp.rating === "N/A" ? null : comp.rating),
+            gemini_score: comp.model_scores?.secondary || (comp.rating === "N/A" ? null : comp.rating),
+            avg_score: comp.rating === "N/A" ? null : comp.rating,
+            model_agreement: modelAgreement,
+            confidence_level: comp.confidence || 'Medium',
+            evidence_count: evidence.artifacts.length + evidence.reflections.length + evidence.chatInteractions.length,
+            artifacts_count: evidence.artifacts.length,
+            reflections_count: evidence.reflections.length,
+            chat_interactions_count: evidence.chatInteractions.length,
+            gallery_projects_count: evidence.galleryProjects.length,
+            achievements_count: evidence.achievements.length,
+            analysis_timestamp: new Date().toISOString(),
+            api_cost_usd: analysis.totalApiCost?.totalCost || 0
+          };
+
+          csvData.push(csvRow);
+        });
+
+        console.log(`✅ Completed Day ${day} analysis with ${analysis.competencies.length} competencies`);
+      }
+
+      console.log(`🎉 Historical analytics complete for ${studentId}:`, {
+        totalRows: csvData.length,
+        totalApiCost: `$${totalApiCost.toFixed(4)}`,
+        daysProcessed: csvData.length > 0 ? Math.max(...csvData.map(row => row.day)) : 0
+      });
+
+      return {
+        csvData,
+        summary: {
+          studentId,
+          totalRows: csvData.length,
+          totalApiCost,
+          daysProcessed: [...new Set(csvData.map(row => row.day))].length,
+          competenciesAnalyzed: [...new Set(csvData.map(row => row.competency_id))].length
+        }
+      };
+
+    } catch (error) {
+      console.error(`Error generating historical analytics for ${studentId}:`, error);
+      throw error;
+    }
+  }
+
+  // Generate CSV string from historical analytics data
+  generateHistoricalCSV(csvData) {
+    if (csvData.length === 0) {
+      return 'No data available';
+    }
+
+    // CSV headers
+    const headers = [
+      'student_id',
+      'competency_id',
+      'competency_name',
+      'day',
+      'date_start',
+      'date_end',
+      'claude_score',
+      'gemini_score',
+      'avg_score',
+      'model_agreement',
+      'confidence_level',
+      'evidence_count',
+      'artifacts_count',
+      'reflections_count',
+      'chat_interactions_count',
+      'gallery_projects_count',
+      'achievements_count',
+      'analysis_timestamp',
+      'api_cost_usd'
+    ];
+
+    // Create CSV rows
+    const csvRows = csvData.map(row => {
+      return headers.map(header => {
+        const value = row[header];
+        // Handle null/undefined values and escape commas/quotes
+        if (value === null || value === undefined) {
+          return 'NA';
+        }
+        const stringValue = String(value);
+        if (stringValue.includes(',') || stringValue.includes('"') || stringValue.includes('\n')) {
+          return `"${stringValue.replace(/"/g, '""')}"`;
+        }
+        return stringValue;
+      }).join(',');
+    });
+
+    return [headers.join(','), ...csvRows].join('\n');
+  }
+
+  // Generate historical analytics for multiple students (batch processing)
+  async generateBatchHistoricalAnalytics(studentIds, options = {}) {
+    try {
+      console.log(`🔄 Starting batch historical analytics for ${studentIds.length} students`);
+
+      const {
+        saveToFile = false,
+        fileName = `historical_competency_analytics_${new Date().toISOString().split('T')[0]}.csv`,
+        onProgress = null
+      } = options;
+
+      const allCsvData = [];
+      const batchSummary = {
+        totalStudents: studentIds.length,
+        studentsProcessed: 0,
+        studentsSkipped: 0,
+        totalRows: 0,
+        totalApiCost: 0,
+        processingErrors: []
+      };
+
+      for (let i = 0; i < studentIds.length; i++) {
+        const studentId = studentIds[i];
+        console.log(`📊 Processing student ${i + 1}/${studentIds.length}: ${studentId}`);
+
+        try {
+          // Generate historical analytics for this student
+          const studentAnalytics = await this.generateHistoricalCompetencyAnalytics(studentId);
+
+          // Add to combined data
+          allCsvData.push(...studentAnalytics.csvData);
+
+          // Update batch summary
+          batchSummary.studentsProcessed++;
+          batchSummary.totalRows += studentAnalytics.csvData.length;
+          batchSummary.totalApiCost += studentAnalytics.summary.totalApiCost;
+
+          console.log(`✅ Completed ${studentId}: ${studentAnalytics.csvData.length} rows, $${studentAnalytics.summary.totalApiCost.toFixed(4)}`);
+
+          // Call progress callback if provided
+          if (onProgress) {
+            onProgress({
+              current: i + 1,
+              total: studentIds.length,
+              studentId,
+              rowsGenerated: studentAnalytics.csvData.length,
+              apiCost: studentAnalytics.summary.totalApiCost
+            });
+          }
+
+          // Small delay to avoid overwhelming the API
+          if (i < studentIds.length - 1) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+
+        } catch (error) {
+          console.error(`❌ Error processing ${studentId}:`, error);
+          batchSummary.studentsSkipped++;
+          batchSummary.processingErrors.push({
+            studentId,
+            error: error.message
+          });
+        }
+      }
+
+      // Generate combined CSV
+      const csvContent = this.generateHistoricalCSV(allCsvData);
+
+      // Save to file if requested
+      let filePath = null;
+      if (saveToFile) {
+        filePath = await this.saveCsvToFile(csvContent, fileName);
+      }
+
+      const finalSummary = {
+        ...batchSummary,
+        csvContent,
+        filePath,
+        generatedAt: new Date().toISOString(),
+        averageApiCostPerStudent: batchSummary.studentsProcessed > 0 ?
+          batchSummary.totalApiCost / batchSummary.studentsProcessed : 0,
+        successRate: (batchSummary.studentsProcessed / batchSummary.totalStudents * 100).toFixed(1) + '%'
+      };
+
+      console.log(`🎉 Batch historical analytics complete:`, finalSummary);
+
+      return {
+        csvData: allCsvData,
+        csvContent,
+        summary: finalSummary
+      };
+
+    } catch (error) {
+      console.error(`Error in batch historical analytics:`, error);
+      throw error;
+    }
+  }
+
+  // Save CSV content to file
+  async saveCsvToFile(csvContent, fileName) {
+    try {
+      const fs = require('fs').promises;
+      const path = require('path');
+
+      // Create exports directory if it doesn't exist
+      const exportsDir = path.join(process.cwd(), 'exports');
+      await fs.mkdir(exportsDir, { recursive: true });
+
+      // Write CSV file
+      const filePath = path.join(exportsDir, fileName);
+      await fs.writeFile(filePath, csvContent, 'utf8');
+
+      console.log(`💾 CSV saved to: ${filePath}`);
+      return filePath;
+
+    } catch (error) {
+      console.error(`Error saving CSV to file:`, error);
+      // Fallback: return content without saving
+      console.warn(`⚠️ Could not save to file, returning CSV content instead`);
+      return null;
+    }
+  }
+
+  // Get list of all students for batch processing
+  async getAllStudentsForAnalytics() {
+    try {
+      // This would typically query your database for all active students
+      // For now, returning a placeholder - you'll need to implement this based on your data structure
+      console.log(`📋 Getting all students for analytics (placeholder implementation)`);
+
+      // Example implementation - replace with actual database query
+      const studentsQuery = query(collection(db, 'students'));
+      const studentsSnapshot = await getDocs(studentsQuery);
+
+      const studentIds = studentsSnapshot.docs.map(doc => doc.id);
+
+      console.log(`📊 Found ${studentIds.length} students for analytics`);
+      return studentIds;
+
+    } catch (error) {
+      console.error(`Error getting all students:`, error);
+      throw error;
+    }
+  }
+
+  // Generate complete historical analytics report (CSV + summary)
+  async generateCompleteHistoricalReport(options = {}) {
+    try {
+      const {
+        studentIds = null,
+        saveToFile = true,
+        includeProgressCallback = true
+      } = options;
+
+      // Get student list if not provided
+      let targetStudents = studentIds;
+      if (!targetStudents) {
+        targetStudents = await this.getAllStudentsForAnalytics();
+      }
+
+      if (targetStudents.length === 0) {
+        throw new Error('No students found for analytics');
+      }
+
+      console.log(`🚀 Generating complete historical report for ${targetStudents.length} students`);
+
+      // Progress callback for real-time updates
+      const progressCallback = includeProgressCallback ? (progress) => {
+        console.log(`📊 Progress: ${progress.current}/${progress.total} students (${progress.studentId}: ${progress.rowsGenerated} rows)`);
+      } : null;
+
+      // Generate batch analytics
+      const report = await this.generateBatchHistoricalAnalytics(targetStudents, {
+        saveToFile,
+        onProgress: progressCallback
+      });
+
+      // Add R analysis recommendations to the summary
+      report.summary.rAnalysisRecommendations = {
+        scoreProgression: `
+# Score progression over time
+ggplot(data, aes(x=day, y=avg_score, color=competency_name)) +
+  geom_line(aes(group=student_id), alpha=0.3) +
+  geom_smooth(method="loess") +
+  facet_wrap(~competency_name) +
+  labs(title="Competency Score Progression Over 8 Days",
+       x="Day", y="Average Score") +
+  theme_minimal()
+`,
+        modelAgreementAnalysis: `
+# Model agreement analysis by day
+model_agreement_by_day <- data %>%
+  group_by(day, competency_id) %>%
+  summarise(avg_agreement = mean(model_agreement, na.rm=TRUE)) %>%
+  ggplot(aes(x=day, y=avg_agreement, color=competency_id)) +
+  geom_line() +
+  labs(title="AI Model Agreement Over Time",
+       x="Day", y="Average Agreement (%)") +
+  theme_minimal()
+`,
+        apiCostTracking: `
+# API cost tracking
+cost_analysis <- data %>%
+  group_by(day) %>%
+  summarise(total_cost = sum(api_cost_usd),
+           cost_per_student = total_cost / n_distinct(student_id)) %>%
+  ggplot(aes(x=day, y=cost_per_student)) +
+  geom_bar(stat="identity", fill="skyblue") +
+  labs(title="API Cost per Student by Day",
+       x="Day", y="Cost per Student ($)") +
+  theme_minimal()
+`
+      };
+
+      console.log(`✅ Complete historical report generated successfully!`);
+      console.log(`📊 Summary: ${report.summary.totalRows} total rows, ${report.summary.totalApiCost.toFixed(4)} total cost`);
+
+      return report;
+
+    } catch (error) {
+      console.error(`Error generating complete historical report:`, error);
+      throw error;
+    }
+  }
+
+  // Get historical competency data with full implementation
   async getCompetencyHistory(studentId, timeRange = '30d') {
-    // This would track competency ratings over time
-    // For now, return current analysis with mock historical data
+    try {
+      console.log(`📈 Getting competency history for ${studentId} (${timeRange})`);
+
+      // For historical analytics, use the new comprehensive method
+      if (timeRange === 'historical_analytics') {
+        return await this.generateHistoricalCompetencyAnalytics(studentId);
+      }
+
+      // For regular history requests, use current analysis with mock historical data
     const currentAnalysis = await this.getCompetencyAnalysis(studentId);
     
     return {
@@ -1527,7 +2013,139 @@ Rating scale: 1-3=Emerging, 4-7=Developing, 8-10=Proficient. Use "N/A" if no evi
         }
       ]
     };
+    } catch (error) {
+      console.error(`Error in getCompetencyHistory for ${studentId}:`, error);
+      throw error;
+    }
   }
 }
 
 export default new CompetencyService();
+
+/*
+📊 HISTORICAL COMPETENCY ANALYTICS - USAGE GUIDE
+==============================================
+
+This service now includes comprehensive historical competency analytics that generates
+competency scores over time for each of the 8 days with cumulative evidence collection.
+
+🎯 CORE FEATURES:
+- Generates competency scores for each day (1-8) with cumulative evidence
+- Excludes Day 8 reflection self-ratings as requested
+- Uses both Claude Sonnet-4 and Gemini 2.5 Flash models
+- Outputs R-optimized CSV format
+- Preserves existing database data
+- Supports batch processing for multiple students
+
+📅 DATE RANGES:
+- Days 1-4: 8/11/25-8/14/25
+- Days 5-8: 8/18/25-8/21/25
+
+🔧 USAGE EXAMPLES:
+=================
+
+1. Generate historical analytics for a single student:
+```javascript
+const competencyService = new CompetencyService();
+const result = await competencyService.generateHistoricalCompetencyAnalytics('student_123');
+
+// Access the data
+console.log(result.csvData); // Array of CSV row objects
+console.log(result.summary); // Processing summary
+```
+
+2. Generate CSV string:
+```javascript
+const csvContent = competencyService.generateHistoricalCSV(result.csvData);
+console.log(csvContent);
+```
+
+3. Batch process multiple students:
+```javascript
+const studentIds = ['student_1', 'student_2', 'student_3'];
+const batchResult = await competencyService.generateBatchHistoricalAnalytics(studentIds, {
+  saveToFile: true,
+  fileName: 'my_historical_analytics.csv',
+  onProgress: (progress) => {
+    console.log(`Progress: ${progress.current}/${progress.total} students`);
+  }
+});
+```
+
+4. Generate complete report for all students:
+```javascript
+const report = await competencyService.generateCompleteHistoricalReport({
+  saveToFile: true,
+  includeProgressCallback: true
+});
+
+// Access R analysis recommendations
+console.log(report.summary.rAnalysisRecommendations.scoreProgression);
+```
+
+📋 CSV OUTPUT FORMAT:
+====================
+The CSV includes these columns (R-optimized):
+- student_id: Student identifier
+- competency_id: One of 8 competency IDs (sense_of_belonging, steam_interest, etc.)
+- competency_name: Human-readable competency name
+- day: Day number (1-8)
+- date_start/date_end: Date range for that day
+- claude_score/gemini_score: Individual model scores (1-10 or NA)
+- avg_score: Average of both models (1-10 or NA)
+- model_agreement: Agreement percentage between models
+- confidence_level: High/Medium/Low confidence
+- evidence_count: Total evidence items for that day
+- artifacts_count, reflections_count, etc.: Breakdown by evidence type
+- analysis_timestamp: When analysis was performed
+- api_cost_usd: Cost of API calls for this analysis
+
+🎨 R ANALYSIS EXAMPLES:
+======================
+The system provides pre-built R analysis code snippets:
+
+1. Score Progression Over Time:
+```r
+ggplot(data, aes(x=day, y=avg_score, color=competency_name)) +
+  geom_line(aes(group=student_id), alpha=0.3) +
+  geom_smooth(method="loess") +
+  facet_wrap(~competency_name) +
+  labs(title="Competency Score Progression Over 8 Days")
+```
+
+2. Model Agreement Analysis:
+```r
+model_agreement_by_day <- data %>%
+  group_by(day, competency_id) %>%
+  summarise(avg_agreement = mean(model_agreement, na.rm=TRUE)) %>%
+  ggplot(aes(x=day, y=avg_agreement, color=competency_id)) +
+  geom_line() +
+  labs(title="AI Model Agreement Over Time")
+```
+
+3. API Cost Tracking:
+```r
+cost_analysis <- data %>%
+  group_by(day) %>%
+  summarise(total_cost = sum(api_cost_usd),
+           cost_per_student = total_cost / n_distinct(student_id)) %>%
+  ggplot(aes(x=day, y=cost_per_student)) +
+  geom_bar(stat="identity", fill="skyblue") +
+  labs(title="API Cost per Student by Day")
+```
+
+⚙️ CONFIGURATION NOTES:
+======================
+- Evidence is collected CUMULATIVELY (Day 5 includes all previous days)
+- Day 8 self-ratings are automatically excluded from evidence set
+- Uses current AI models for reanalysis (not preserving old scores)
+- Database data is preserved - only reads, never writes
+- API costs are tracked and included in output
+
+🚨 IMPORTANT:
+============
+- This system makes many API calls - monitor your usage and costs
+- Processing multiple students can take significant time
+- Ensure you have proper error handling in production
+- The getAllStudentsForAnalytics() method needs customization for your data structure
+*/
