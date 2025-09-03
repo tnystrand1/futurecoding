@@ -68,3 +68,13 @@ node_modules/
 
 # dataconnect generated files
 .dataconnect
+
+# Archived unused components (local backup only)
+archived_components/
+
+# Build outputs
+dist/
+
+# Test artifacts  
+test-results/
+playwright-report/

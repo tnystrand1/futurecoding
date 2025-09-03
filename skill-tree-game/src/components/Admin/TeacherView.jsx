@@ -4,6 +4,7 @@ import { db } from '../../utils/firebase-config';
 import PendingEvidence from './PendingEvidence';
 import ChatLogViewer from './ChatLogViewer';
 import CompetencyAnalytics from './CompetencyAnalytics';
+import ThreeCompetencyAnalytics from './ThreeCompetencyAnalytics';
 import DailyReflectionsViewer from './DailyReflectionsViewer';
 import competencyService from '../../services/competencyService';
 import pdfExportService from '../../services/pdfExportService';
@@ -16,7 +17,7 @@ const TeacherView = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [password, setPassword] = useState('');
   const [authError, setAuthError] = useState('');
-  const [activeTab, setActiveTab] = useState('students'); // 'students', 'pending', 'chatlogs', 'reflections', or 'analytics'
+  const [activeTab, setActiveTab] = useState('students'); // 'students', 'pending', 'chatlogs', 'reflections', 'analytics', or 'three-competency'
   const [selectedStudentForAnalytics, setSelectedStudentForAnalytics] = useState(null);
   
   // PDF Export state
@@ -458,6 +459,23 @@ const TeacherView = () => {
           >
             📊 Competency Analytics
           </button>
+          
+          <button
+            onClick={() => setActiveTab('three-competency')}
+            style={{
+              flex: 1,
+              padding: '16px 24px',
+              background: activeTab === 'three-competency' ? '#7c3aed' : 'transparent',
+              color: activeTab === 'three-competency' ? 'white' : '#374151',
+              border: 'none',
+              fontSize: '16px',
+              fontWeight: 'bold',
+              cursor: 'pointer',
+              transition: 'all 0.2s'
+            }}
+          >
+            🎯 Three Competency Analytics
+          </button>
         </div>
 
         {/* Tab Content */}
@@ -672,6 +690,17 @@ const TeacherView = () => {
             boxShadow: '0 8px 32px rgba(0,0,0,0.2)'
           }}>
             <DailyReflectionsViewer />
+          </div>
+        )}
+
+        {/* Three Competency Analytics Tab */}
+        {activeTab === 'three-competency' && (
+          <div style={{
+            background: 'white',
+            borderRadius: '0 0 12px 12px',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.2)'
+          }}>
+            <ThreeCompetencyAnalytics />
           </div>
         )}
 
